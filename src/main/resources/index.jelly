@@ -1,0 +1,7 @@
+<?jelly escape-by-default='true'?>
+<!--
+  This view is used to render the installed plugins page.
+-->
+<div>
+  This plugin enables code signing for JAR files, executables or PowerShell using the Venafi PKCS#11 Driver.
+</div>
