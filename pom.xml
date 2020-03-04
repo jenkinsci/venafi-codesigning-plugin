@@ -14,6 +14,7 @@
     <properties>
         <jenkins.version>2.164.1</jenkins.version>
         <java.level>8</java.level>
+        <workflow.version>2.0</workflow.version>
     </properties>
 
     <name>Venafi Next-Gen Code Signing</name>
@@ -57,18 +58,31 @@
         </dependencies>
     </dependencyManagement>
     <dependencies>
+        <!-- Plugin dependencies -->
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>structs</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.jenkins-ci.plugins.workflow</groupId>
-            <artifactId>workflow-cps</artifactId>
-            <scope>test</scope>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>credentials</artifactId>
+            <version>2.1.13</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>plain-credentials</artifactId>
+            <version>1.1</version>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-job</artifactId>
+            <version>2.0</version>
+        </dependency>
+
+        <!-- Test dependencies -->
+        <dependency>
+            <groupId>org.jenkins-ci.plugins.workflow</groupId>
+            <artifactId>workflow-cps</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
