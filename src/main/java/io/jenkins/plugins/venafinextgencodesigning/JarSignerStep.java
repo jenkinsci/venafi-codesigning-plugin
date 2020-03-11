@@ -1,19 +1,15 @@
 package io.jenkins.plugins.venafinextgencodesigning;
 
-import java.io.PrintStream;
 import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
 
 import hudson.Extension;
-import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.TaskListener;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 
-import org.jenkinsci.plugins.workflow.FilePathUtils;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
@@ -72,27 +68,12 @@ public class JarSignerStep extends Step implements Serializable {
 
     @Override
     public StepExecution start(StepContext context) throws Exception {
-        return new Execution(context);
+        return new JarSignerStepExecution(this, context);
     }
 
-    public class Execution extends AbstractStepExecutionImpl {
-        private static final long serialVersionUID = 1;
-
-        public Execution(StepContext context) {
-            super(context);
-        }
-
-        @Override
-        public boolean start() throws Exception {
-            PrintStream logger = getContext().get(TaskListener.class).getLogger();
-            FilePath ws = getContext().get(FilePath.class);
-            //Launcher launcher = context.get(Launcher.class);
-            logger.println("Hello, world! server config count = " + PluginConfig.get().getTpmServerConfigs().size());
-            logger.println("Current workspace = " + ws);
-            logger.println("Node name = " + FilePathUtils.getNodeName(ws));
-            getContext().onSuccess(null);
-            return true;
-        }
+    @Override
+    public String toString() {
+        return Messages.JarSignerStep_functionName();
     }
 
     @Extension
@@ -106,12 +87,12 @@ public class JarSignerStep extends Step implements Serializable {
 
         @Override
         public String getFunctionName() {
-            return "venafiCodeSignWithJarSigner";
+            return Messages.JarSignerStep_functionName();
         }
 
         @Override
         public String getDisplayName() {
-            return Messages.JarSignerBuilder_displayName();
+            return Messages.JarSignerStep_displayName();
         }
 
         @Override
