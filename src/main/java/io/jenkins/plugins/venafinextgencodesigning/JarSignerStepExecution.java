@@ -125,6 +125,7 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
                 }
             }
         });
+        thread.setName(Messages.JarSignerStep_functionName() + " execution");
         thread.start();
         flowNode.addAction(new PauseAction(Messages.JarSignerStep_functionName()));
         return false;
