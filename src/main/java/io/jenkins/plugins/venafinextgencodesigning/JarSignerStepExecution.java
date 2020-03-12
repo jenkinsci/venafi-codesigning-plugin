@@ -71,16 +71,23 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
 
     @Override
     public void stop(Throwable cause) throws Exception {
-        try {
-            if (thread != null) {
-                thread.interrupt();
+        PrintStream logger = getContext().get(TaskListener.class).getLogger();
+        logger.println("[" + step + "] Stopping...");
+
+        if (thread == null) {
+            getContext().onFailure(cause);
+        } else {
+            // We let the thread take care of calling onSuccess()/onFailure().
+            thread.interrupt();
+            try {
                 thread.join();
+            } catch (InterruptedException e) {
+                // Ignore this and let the caller call us again
+                // if it's not satisfied.
             }
-        } finally {
+            // Not using 'finally': only set null once we know the thread
+            // is gone, because it's legal for stop() to be called again.
             thread = null;
-            if (!Thread.currentThread().isInterrupted()) {
-                getContext().onFailure(cause);
-            }
         }
     }
 
