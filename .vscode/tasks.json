@@ -1,0 +1,72 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build plugin & run Jenkins",
+            "type": "process",
+            "command": "mvn",
+            "args": [
+                "-o",
+                "hpi:run"
+            ],
+            "options": {
+                "env": {
+                    // https://ryanharrison.co.uk/2018/04/29/faster-java-startup-time.html
+                    "JAVA_OPTS": "-client -Xverify:none -XX:TieredStopAtLevel=1"
+                }
+            },
+            "isBackground": true,
+            "group": "build"
+        },
+        {
+            "label": "Build plugin & run Jenkins (debug mode)",
+            "type": "process",
+            "command": "mvn",
+            "args": [
+                "-o",
+                "hpi:run"
+            ],
+            "options": {
+                "env": {
+                    // https://ryanharrison.co.uk/2018/04/29/faster-java-startup-time.html
+                    "JAVA_OPTS": "-client -Xverify:none -XX:TieredStopAtLevel=1",
+                    "MAVEN_OPTS": "-Xdebug -Xrunjdwp:transport=dt_socket,server=y,address=8271,suspend=n"
+                }
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "pattern": [{
+                    "regexp": "^nonexistant regex$",
+                    "file": 1,
+                    "location": 2,
+                    "message": 3
+                }],
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^Building Venafi",
+                    "endsPattern": "^Jenkins home directory:"
+                }
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            // Run this task if Jenkins can't detect our plugin.
+            "label": "Clean",
+            "type": "shell",
+            "command": "rm -rf target && mvn -o clean",
+            "options": {
+                "env": {
+                    // https://ryanharrison.co.uk/2018/04/29/faster-java-startup-time.html
+                    "JAVA_OPTS": "-client -Xverify:none -XX:TieredStopAtLevel=1"
+                }
+            },
+            "group": "build",
+            "problemMatcher": []
+        }
+    ]
+}

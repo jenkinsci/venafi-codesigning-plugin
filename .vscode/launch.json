@@ -1,0 +1,13 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Debug (Attach)",
+            "request": "attach",
+            "hostName": "127.0.0.1",
+            "port": 8271,
+            "preLaunchTask": "Build plugin & run Jenkins (debug mode)"
+        }
+    ]
+}
