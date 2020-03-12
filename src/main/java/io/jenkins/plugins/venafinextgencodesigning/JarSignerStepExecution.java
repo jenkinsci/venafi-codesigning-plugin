@@ -91,6 +91,23 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
         }
     }
 
+    @Override
+    public void onResume() {
+        TaskListener taskListener;
+        try {
+            taskListener = getContext().get(TaskListener.class);
+        } catch (Exception e) {
+            getContext().onFailure(e);
+            return;
+        }
+
+        PrintStream logger = taskListener.getLogger();
+        logger.println("[" + step + "] Resuming...");
+        logger.println("[" + step + "] ERROR: resuming not supported by this plugin.");
+        getContext().onFailure(new RuntimeException("Resuming not supported by "
+            + Messages.JarSignerStep_functionName()));
+    }
+
     private boolean lock(PrintStream logger, FlowNode flowNode, Run<?, ?> run, String key, Runnable continuation) {
         thread = new Thread(() -> {
             try {
