@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Set;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.StaplerRequest;
@@ -42,8 +43,19 @@ public class PluginConfig extends GlobalConfiguration {
         this.tpmServerConfigs = tpmServerConfigs;
     }
 
+    @Nonnull
     public List<TpmServerConfig> getTpmServerConfigs() {
         return tpmServerConfigs;
+    }
+
+    @Nullable
+    public TpmServerConfig getTpmServerConfigByName(String name) {
+        for (TpmServerConfig config: tpmServerConfigs) {
+            if (config.getName().equals(name)) {
+                return config;
+            }
+        }
+        return null;
     }
 
     @DataBoundSetter

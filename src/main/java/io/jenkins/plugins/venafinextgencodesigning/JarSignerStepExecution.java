@@ -1,6 +1,7 @@
 package io.jenkins.plugins.venafinextgencodesigning;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -11,7 +12,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import org.jenkinsci.plugins.workflow.FilePathUtils;
+import org.apache.commons.lang.NotImplementedException;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
@@ -19,7 +20,9 @@ import org.jenkinsci.plugins.workflow.support.actions.PauseAction;
 import org.jenkinsci.remoting.RoleChecker;
 
 import hudson.FilePath;
+import hudson.Launcher;
 import hudson.Platform;
+import hudson.Proc;
 import hudson.FilePath.FileCallable;
 import hudson.model.Computer;
 import hudson.model.Node;
@@ -45,6 +48,7 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
         FilePath ws = getContext().get(FilePath.class);
         Run<?, ?> run = getContext().get(Run.class);
         FlowNode flowNode = getContext().get(FlowNode.class);
+        Launcher launcher = getContext().get(Launcher.class);
         Computer wsComputer = ws.toComputer();
         if (wsComputer == null) {
             throw new IOException("Unable to retrieve computer for workspace");
@@ -58,14 +62,29 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
             throw new IOException("Unable to retrieve root path of node");
         }
 
+        logger.println("[" + step + "] Using TPM server configuration: " + step.getTpmServerName());
+        TpmServerConfig tpmServerConfig = PluginConfig.get().getTpmServerConfigByName(
+            step.getTpmServerName());
+        if (tpmServerConfig == null) {
+            getContext().onFailure(new RuntimeException("No TPM server configuration with name '"
+                + step.getTpmServerName() + "' found"));
+            return true;
+        }
+
         AgentInfo agentInfo = nodeRoot.act(new GetAgentInfo());
+        logger.println("[" + step + "] Detected OS: " + agentInfo.osType);
 
         String lockKey = calculateLockKey(wsComputer, agentInfo);
         return lock(logger, flowNode, run, lockKey, () -> {
-            logger.println("Hello, world! server config count = " + PluginConfig.get().getTpmServerConfigs().size());
-            logger.println("Current workspace = " + ws);
-            logger.println("Node name = " + FilePathUtils.getNodeName(ws));
-            getContext().onSuccess(null);
+            try {
+                loginTpmServer(logger, launcher, ws, agentInfo, tpmServerConfig);
+                //invokeJarSigner(logger);
+                getContext().onSuccess(null);
+            } catch (Exception e) {
+                getContext().onFailure(e);
+            } finally {
+                logoutTpmServer(logger, ws, agentInfo);
+            }
         });
     }
 
@@ -106,6 +125,154 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
         logger.println("[" + step + "] ERROR: resuming not supported by this plugin.");
         getContext().onFailure(new RuntimeException("Resuming not supported by "
             + Messages.JarSignerStep_functionName()));
+    }
+
+    private void loginTpmServer(PrintStream logger, Launcher launcher, FilePath ws,
+        AgentInfo agentInfo, TpmServerConfig tpmServerConfig)
+        throws InterruptedException, IOException, RuntimeException
+    {
+        invokePkcs11ConfigSetUrl(logger, launcher, ws, tpmServerConfig);
+        invokePkcs11ConfigTrust(logger, launcher, ws, tpmServerConfig);
+        //invokePkcs11ConfigGetGrant(logger, launcher, ws, tpmServerConfig);
+    }
+
+    private void invokePkcs11ConfigSetUrl(PrintStream logger, Launcher launcher, FilePath ws,
+        TpmServerConfig tpmServerConfig)
+        throws InterruptedException, IOException, RuntimeException
+    {
+        logger.println("[" + step + "] Logging into TPM server: configuring client: setting URL.");
+
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        Launcher.ProcStarter starter =
+            launcher.
+            launch().
+            cmds("pkcs11config",
+                "seturl",
+                "--authurl=" + tpmServerConfig.getAuthUrl(),
+                "--hsmurl=" + tpmServerConfig.getHsmUrl()).
+            stdout(output).
+            pwd(ws);
+
+        Proc proc;
+        int code;
+        try {
+            proc = starter.start();
+            code = proc.join();
+        } catch (IOException e) {
+            logger.println("[" + step + "] Error setting URL configuration: "
+                + e.getMessage());
+            throw e;
+        }
+
+        if (code == 0) {
+            logger.println("[" + step + "] Successfully set URL configuration.");
+        } else {
+            logger.println("[" + step + "] Error setting URL configuration."
+                + " Output from command 'pkcs11config seturl' is as follows:\n"
+                + output.toString());
+            throw new RuntimeException("Error setting URL configuration");
+        }
+    }
+
+    private void invokePkcs11ConfigTrust(PrintStream logger, Launcher launcher, FilePath ws,
+        TpmServerConfig tpmServerConfig)
+        throws InterruptedException, IOException, RuntimeException
+    {
+        logger.println("[" + step + "] Logging into TPM server: configuring client: establishing trust with server.");
+
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        Launcher.ProcStarter starter =
+            launcher.
+            launch().
+            cmds("pkcs11config",
+                "trust",
+                "--hsmurl=" + tpmServerConfig.getHsmUrl()).
+            stdout(output).
+            pwd(ws);
+
+        Proc proc;
+        int code;
+        try {
+            proc = starter.start();
+            code = proc.join();
+        } catch (IOException e) {
+            logger.println("[" + step + "] Error establishing trust with server: "
+                + e.getMessage());
+            throw e;
+        }
+
+        if (code == 0) {
+            logger.println("[" + step + "] Successfully established trust with server.");
+        } else {
+            logger.println("[" + step + "] Error establishing trust with server."
+                + " Output from command 'pkcs11config trust' is as follows:\n"
+                + output.toString());
+            throw new RuntimeException("Error establishing trust with server");
+        }
+    }
+
+    private void logoutTpmServer(PrintStream logger, FilePath ws, AgentInfo agentInfo) {
+        if (!agentInfo.osType.isUnixCompatible()) {
+            throw new NotImplementedException(
+                "TPM server logout not yet implemented for Windows nodes");
+        }
+
+        FilePath home;
+        try {
+            home = FilePath.getHomeDirectory(ws.getChannel());
+        } catch (Exception e) {
+            e.printStackTrace(logger);
+            return;
+        }
+
+        FilePath libhsmtrust = home.child(".libhsmtrust");
+        FilePath libhsmconfig = home.child(".libhsmconfig");
+
+        logger.println("[" + step + "] Logging out of TPM server: deleting " + libhsmtrust);
+        try {
+            deleteFilePathInterruptionSafe(libhsmtrust);
+        } catch (InterruptedException e) {
+            logger.println("[" + step + "] Error logging out of TPM server:"
+                + " operation interrupted");
+            e.printStackTrace(logger);
+            return;
+        } catch (Exception e) {
+            logger.println("[" + step + "] Error logging out of TPM server: "
+                + e.getMessage());
+            e.printStackTrace(logger);
+        }
+
+        logger.println("[" + step + "] Logging out of TPM server: deleting " + libhsmconfig);
+        try {
+            libhsmconfig.delete();
+        } catch (Exception e) {
+            logger.println("[" + step + "] Error logging out of TPM server: "
+                + e.getMessage());
+            e.printStackTrace(logger);
+        }
+    }
+
+    // Deletes the given FilePath. If the thread is interrupted, then it will
+    // keep trying to delete the FilePath, and then re-throw the InterruptionException
+    // afterwards. This method is useful if we really want to make sure that
+    // the file is gone, even if we get interrupted ourselves.
+    private void deleteFilePathInterruptionSafe(FilePath path)
+        throws IOException, InterruptedException
+    {
+        InterruptedException interruption = null;
+
+        while (true) {
+            try {
+                path.delete();
+                break;
+            } catch (InterruptedException e) {
+                interruption = e;
+            }
+        }
+
+        if (interruption != null) {
+            throw interruption;
+        }
     }
 
     private boolean lock(PrintStream logger, FlowNode flowNode, Run<?, ?> run, String key, Runnable continuation) {
@@ -239,7 +406,6 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
         private static final long serialVersionUID = 1;
 
         public String username;
-        public String home;
         public OsType osType;
     }
 
@@ -250,7 +416,6 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
         public AgentInfo invoke(File nodeRoot, VirtualChannel virtualChannel) throws IOException, InterruptedException {
             AgentInfo info = new AgentInfo();
             info.username = System.getProperty("user.name");
-            info.home = System.getProperty("user.home");
             if (Platform.isDarwin()) {
                 info.osType = OsType.MACOS;
             } else if (Platform.current() == Platform.WINDOWS) {

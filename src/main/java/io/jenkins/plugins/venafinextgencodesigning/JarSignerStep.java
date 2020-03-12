@@ -5,11 +5,14 @@ import java.util.HashSet;
 import java.util.Set;
 
 import hudson.Extension;
+import hudson.FilePath;
 import hudson.Launcher;
+import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 
+import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
@@ -82,6 +85,9 @@ public class JarSignerStep extends Step implements Serializable {
 
         static {
             REQUIRED_CONTEXTS.add(TaskListener.class);
+            REQUIRED_CONTEXTS.add(FilePath.class);
+            REQUIRED_CONTEXTS.add(Run.class);
+            REQUIRED_CONTEXTS.add(FlowNode.class);
             REQUIRED_CONTEXTS.add(Launcher.class);
         };
 
