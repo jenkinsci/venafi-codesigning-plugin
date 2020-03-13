@@ -62,13 +62,12 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
             throw new IOException("Unable to retrieve root path of node");
         }
 
-        logger.println("[" + step + "] Using TPM server configuration: " + step.getTpmServerName());
+        log(logger, "Using TPM server configuration: %s", step.getTpmServerName());
         TpmServerConfig tpmServerConfig = PluginConfig.get().getTpmServerConfigByName(
             step.getTpmServerName());
         if (tpmServerConfig == null) {
-            getContext().onFailure(new RuntimeException("No TPM server configuration with name '"
-                + step.getTpmServerName() + "' found"));
-            return true;
+            throw new RuntimeException("No TPM server configuration with name '"
+                + step.getTpmServerName() + "' found");
         }
 
         AgentInfo agentInfo = nodeRoot.act(new GetAgentInfo());
@@ -91,7 +90,7 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
     @Override
     public void stop(Throwable cause) throws Exception {
         PrintStream logger = getContext().get(TaskListener.class).getLogger();
-        logger.println("[" + step + "] Stopping...");
+        log(logger, "Stopping...");
 
         if (thread == null) {
             getContext().onFailure(cause);
@@ -121,8 +120,8 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
         }
 
         PrintStream logger = taskListener.getLogger();
-        logger.println("[" + step + "] Resuming...");
-        logger.println("[" + step + "] ERROR: resuming not supported by this plugin.");
+        log(logger, "Resuming...");
+        log(logger, "ERROR: resuming not supported by this plugin.");
         getContext().onFailure(new RuntimeException("Resuming not supported by "
             + Messages.JarSignerStep_functionName()));
     }
@@ -172,8 +171,9 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
 
     private void logoutTpmServer(PrintStream logger, FilePath ws, AgentInfo agentInfo) {
         if (!agentInfo.osType.isUnixCompatible()) {
-            throw new NotImplementedException(
-                "TPM server logout not yet implemented for Windows nodes");
+            // TODO: remove credentials from Windows registry
+            log(logger, "WARNING: TPM server logout not yet implemented for Windows nodes");
+            return;
         }
 
         FilePath home;
@@ -187,26 +187,23 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
         FilePath libhsmtrust = home.child(".libhsmtrust");
         FilePath libhsmconfig = home.child(".libhsmconfig");
 
-        logger.println("[" + step + "] Logging out of TPM server: deleting " + libhsmtrust);
+        log(logger, "Logging out of TPM server: deleting %s", libhsmtrust);
         try {
             deleteFilePathInterruptionSafe(libhsmtrust);
         } catch (InterruptedException e) {
-            logger.println("[" + step + "] Error logging out of TPM server:"
-                + " operation interrupted");
+            log(logger, "Error logging out of TPM server: operation interrupted");
             e.printStackTrace(logger);
             return;
         } catch (Exception e) {
-            logger.println("[" + step + "] Error logging out of TPM server: "
-                + e.getMessage());
+            log(logger, "Error logging out of TPM server: %s", e.getMessage());
             e.printStackTrace(logger);
         }
 
-        logger.println("[" + step + "] Logging out of TPM server: deleting " + libhsmconfig);
+        log(logger, "Logging out of TPM server: deleting %s", libhsmconfig);
         try {
             libhsmconfig.delete();
         } catch (Exception e) {
-            logger.println("[" + step + "] Error logging out of TPM server: "
-                + e.getMessage());
+            log(logger, "Error logging out of TPM server: %s", e.getMessage());
             e.printStackTrace(logger);
         }
     }
@@ -268,6 +265,10 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
                 errorMessage, code, shortCommandLine, output.toString());
             throw new IOException(errorMessage + ": command exited with code " + code);
         }
+    }
+
+    private void log(PrintStream logger, String format, Object... args) {
+        logger.println("[" + step + "] " + String.format(format, args));
     }
 
     private boolean lock(PrintStream logger, FlowNode flowNode, Run<?, ?> run, String key, Runnable continuation) {
