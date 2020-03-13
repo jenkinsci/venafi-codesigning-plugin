@@ -138,77 +138,36 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
 
     private void invokePkcs11ConfigSetUrl(PrintStream logger, Launcher launcher, FilePath ws,
         TpmServerConfig tpmServerConfig)
-        throws InterruptedException, IOException, RuntimeException
+        throws InterruptedException, IOException
     {
-        logger.println("[" + step + "] Logging into TPM server: configuring client: setting URL.");
-
-        ByteArrayOutputStream output = new ByteArrayOutputStream();
-        Launcher.ProcStarter starter =
-            launcher.
-            launch().
-            cmds("pkcs11config",
+        invokeCommand(logger, launcher, ws,
+            "Logging into TPM server: configuring client: setting URL.",
+            "Successfully set URL configuration.",
+            "Error setting URL configuration",
+            "pkcs11config seturl",
+            new String[]{
+                "pkcs11config",
                 "seturl",
                 "--authurl=" + tpmServerConfig.getAuthUrl(),
-                "--hsmurl=" + tpmServerConfig.getHsmUrl()).
-            stdout(output).
-            pwd(ws);
-
-        Proc proc;
-        int code;
-        try {
-            proc = starter.start();
-            code = proc.join();
-        } catch (IOException e) {
-            logger.println("[" + step + "] Error setting URL configuration: "
-                + e.getMessage());
-            throw e;
-        }
-
-        if (code == 0) {
-            logger.println("[" + step + "] Successfully set URL configuration.");
-        } else {
-            logger.println("[" + step + "] Error setting URL configuration."
-                + " Output from command 'pkcs11config seturl' is as follows:\n"
-                + output.toString());
-            throw new RuntimeException("Error setting URL configuration");
-        }
+                "--hsmurl=" + tpmServerConfig.getHsmUrl()
+            });
     }
 
     private void invokePkcs11ConfigTrust(PrintStream logger, Launcher launcher, FilePath ws,
         TpmServerConfig tpmServerConfig)
-        throws InterruptedException, IOException, RuntimeException
+        throws InterruptedException, IOException
     {
-        logger.println("[" + step + "] Logging into TPM server: configuring client: establishing trust with server.");
-
-        ByteArrayOutputStream output = new ByteArrayOutputStream();
-        Launcher.ProcStarter starter =
-            launcher.
-            launch().
-            cmds("pkcs11config",
+        invokeCommand(logger, launcher, ws,
+            "Logging into TPM server: configuring client: establishing trust with server.",
+            "Successfully established trust with TPM server.",
+            "Error establishing trust with TPM server",
+            "pkcs11config trust",
+            new String[]{
+                "pkcs11config",
                 "trust",
-                "--hsmurl=" + tpmServerConfig.getHsmUrl()).
-            stdout(output).
-            pwd(ws);
+                "--hsmurl=" + tpmServerConfig.getHsmUrl()
+            });
 
-        Proc proc;
-        int code;
-        try {
-            proc = starter.start();
-            code = proc.join();
-        } catch (IOException e) {
-            logger.println("[" + step + "] Error establishing trust with server: "
-                + e.getMessage());
-            throw e;
-        }
-
-        if (code == 0) {
-            logger.println("[" + step + "] Successfully established trust with server.");
-        } else {
-            logger.println("[" + step + "] Error establishing trust with server."
-                + " Output from command 'pkcs11config trust' is as follows:\n"
-                + output.toString());
-            throw new RuntimeException("Error establishing trust with server");
-        }
     }
 
     private void logoutTpmServer(PrintStream logger, FilePath ws, AgentInfo agentInfo) {
@@ -272,6 +231,42 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
 
         if (interruption != null) {
             throw interruption;
+        }
+    }
+
+    private String invokeCommand(PrintStream logger, Launcher launcher, FilePath ws,
+        String preMessage, String successMessage, String errorMessage,
+        String shortCommandLine, String[] cmdArgs)
+        throws InterruptedException, IOException
+    {
+        log(logger, "%s", preMessage);
+
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        Launcher.ProcStarter starter =
+            launcher.
+            launch().
+            cmds(cmdArgs).
+            stdout(output).
+            pwd(ws);
+
+        Proc proc;
+        int code;
+        try {
+            proc = starter.start();
+            code = proc.join();
+        } catch (IOException e) {
+            log(logger, "%s: %s", errorMessage, e.getMessage());
+            throw e;
+        }
+
+        if (code == 0) {
+            log(logger, "%s", successMessage);
+            return output.toString();
+        } else {
+            log(logger,
+                "%s: command exited with code %d. Output from command '%s' is as follows:\n%s",
+                errorMessage, code, shortCommandLine, output.toString());
+            throw new IOException(errorMessage + ": command exited with code " + code);
         }
     }
 
