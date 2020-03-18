@@ -1,16 +1,12 @@
 package io.jenkins.plugins.venafinextgencodesigning;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.PrintStream;
-import java.io.Reader;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
@@ -32,7 +28,6 @@ import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
 import hudson.util.Secret;
-import jenkins.security.MasterToSlaveCallable;
 
 public class JarSignerStepExecution extends AbstractStepExecutionImpl {
     private static final long serialVersionUID = 1;
@@ -140,7 +135,7 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
 
             FilePath certChainFile = null;
 
-            String lockKey = calculateLockKey(wsComputer, agentInfo);
+            String lockKey = calculateLockKey(wsComputer, launcher, agentInfo);
             lock(logger, flowNode, run, lockKey);
             try {
                 certChainFile = ws.createTempFile("venafi-certchain", "crt");
@@ -343,11 +338,11 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
 
         if (code == 0) {
             log(logger, "%s", successMessage);
-            return output.toString();
+            return output.toString("UTF-8");
         } else {
             log(logger,
                 "%s: command exited with code %d. Output from command '%s' is as follows:\n%s",
-                errorMessage, code, shortCommandLine, output.toString());
+                errorMessage, code, shortCommandLine, output.toString("UTF-8"));
             throw new IOException(errorMessage + ": command exited with code " + code);
         }
     }
@@ -388,10 +383,10 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
         }
     }
 
-    private String calculateLockKey(Computer computer, AgentInfo agentInfo)
+    private String calculateLockKey(Computer computer, Launcher launcher, AgentInfo agentInfo)
         throws IOException, InterruptedException
     {
-        return getFqdn(computer, agentInfo) + ":" + agentInfo.username;
+        return getFqdn(computer, launcher, agentInfo) + ":" + agentInfo.username;
     }
 
     // Determines the FQDN of the given Computer.
@@ -402,7 +397,7 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
     //
     // Never returns null. If the hostname cannot be determined, then returns
     // the empty string.
-    private String getFqdn(Computer computer, AgentInfo agentInfo)
+    private String getFqdn(Computer computer, Launcher launcher, AgentInfo agentInfo)
         throws IOException, InterruptedException
     {
         String result = computer.getHostName();
@@ -414,43 +409,21 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
             return "";
         }
 
-        VirtualChannel channel = computer.getChannel();
-        if (channel == null) {
-            return "";
-        }
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        Launcher.ProcStarter starter =
+            launcher.
+            launch().
+            cmds("hostname", "-f").
+            stdout(output).
+            quiet(true);
 
-        return channel.call(new RunHostNameFCommand());
-    }
+        Proc proc = starter.start();
+        int code = proc.join();
 
-    public static final class RunHostNameFCommand extends MasterToSlaveCallable<String, IOException> {
-        private static final long serialVersionUID = 1;
-        private static final long TIMEOUT_QTY = 5;
-        private static final TimeUnit TIMEOUT_UNIT = TimeUnit.SECONDS;
-
-        public String call() throws IOException {
-            ProcessBuilder builder = new ProcessBuilder("hostname", "-f");
-            builder.redirectInput(ProcessBuilder.Redirect.INHERIT);
-            builder.redirectError(ProcessBuilder.Redirect.INHERIT);
-            Process process = builder.start();
-            try {
-                Reader reader = new InputStreamReader(process.getInputStream());
-                return new BufferedReader(reader).readLine().trim();
-            } finally {
-                boolean done;
-                try {
-                    done = process.waitFor(TIMEOUT_QTY, TIMEOUT_UNIT);
-                } catch (InterruptedException e) {
-                    done = false;
-                }
-                if (!done) {
-                    process.destroyForcibly();
-                    try {
-                        process.waitFor();
-                    } catch (InterruptedException e) {
-                        // All we can do is ignoring this
-                    }
-                }
-            }
+        if (code == 0) {
+            return output.toString("UTF-8").trim();
+        } else {
+            throw new IOException("Error determining node's FQDN: command 'hostname -f' exited with code " + code);
         }
     }
 
