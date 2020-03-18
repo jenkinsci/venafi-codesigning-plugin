@@ -80,12 +80,16 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
                 + tpmServerConfig.getCredentialsId() + "' found");
         }
 
-        thread = new Thread(() -> {
+        Thread thread = new Thread(() -> {
             executeInBackgroundThread(logger, ws, run, flowNode, launcher, wsComputer,
                 wsNode, nodeRoot, tpmServerConfig, credentials);
         });
         thread.setName(Messages.JarSignerStep_functionName() + " execution");
-        thread.start();
+        synchronized(this) {
+            this.thread = thread;
+            thread.start();
+        }
+
         return false;
     }
 
