@@ -9,7 +9,4 @@
     <f:entry title="${%Certificate label}" field="certLabel">
         <f:textbox />
     </f:entry>
-    <f:entry title="${%Certificate chain file path}" field="certChainFile">
-        <f:textbox />
-    </f:entry>
 </j:jelly>

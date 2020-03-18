@@ -27,7 +27,6 @@ public class JarSignerStep extends Step implements Serializable {
     private String tpmServerName;
     private String jarFile;
     private String certLabel;
-    private String certChainFile;
 
     @DataBoundConstructor
     public JarSignerStep() {
@@ -58,15 +57,6 @@ public class JarSignerStep extends Step implements Serializable {
     @DataBoundSetter
     public void setCertLabel(String value) {
         this.certLabel = value;
-    }
-
-    public String getCertChainFile() {
-        return certChainFile;
-    }
-
-    @DataBoundSetter
-    public void setCertChainFile(String value) {
-        this.certChainFile = value;
     }
 
     @Override
@@ -119,10 +109,6 @@ public class JarSignerStep extends Step implements Serializable {
         }
 
         public FormValidation doCheckCertLabel(@QueryParameter String value) {
-            return FormValidation.validateRequired(value);
-        }
-
-        public FormValidation doCheckCertChainFile(@QueryParameter String value) {
             return FormValidation.validateRequired(value);
         }
     }

@@ -9,7 +9,6 @@ import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import jenkins.model.Jenkins;
 
-import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
@@ -152,27 +151,11 @@ public class TpmServerConfig extends AbstractDescribableImpl<TpmServerConfig> {
                 }
             }
 
-            if (findCredentials(item, credentialsId) == null) {
+            if (Utils.findCredentials(credentialsId, item) == null) {
                 return FormValidation.error("Cannot find currently selected credentials");
             }
 
             return FormValidation.ok();
-        }
-
-        private StandardUsernamePasswordCredentials findCredentials(Item item, String credentialsId) {
-            if (StringUtils.isBlank(credentialsId)) {
-                return null;
-            }
-            return CredentialsMatchers.firstOrNull(
-                CredentialsProvider.lookupCredentials(
-                    StandardUsernamePasswordCredentials.class,
-                    item,
-                    ACL.SYSTEM,
-                    new ArrayList<>()),
-                CredentialsMatchers.allOf(
-                    CredentialsMatchers.withId(credentialsId),
-                    CredentialsMatchers.anyOf(
-                        CredentialsMatchers.instanceOf(StandardUsernamePasswordCredentials.class))));
         }
     }
 }

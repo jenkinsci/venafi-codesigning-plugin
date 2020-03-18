@@ -12,7 +12,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.lang.NotImplementedException;
+import com.cloudbees.plugins.credentials.CredentialsProvider;
+import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
+
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
@@ -29,6 +31,7 @@ import hudson.model.Node;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
+import hudson.util.Secret;
 import jenkins.security.MasterToSlaveCallable;
 
 public class JarSignerStepExecution extends AbstractStepExecutionImpl {
@@ -70,21 +73,20 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
                 + step.getTpmServerName() + "' found");
         }
 
-        AgentInfo agentInfo = nodeRoot.act(new GetAgentInfo());
-        logger.println("[" + step + "] Detected OS: " + agentInfo.osType);
+        StandardUsernamePasswordCredentials credentials = Utils.findCredentials(
+            tpmServerConfig.getCredentialsId());
+        if (credentials == null) {
+            throw new RuntimeException("No credentials with ID '"
+                + tpmServerConfig.getCredentialsId() + "' found");
+        }
 
-        String lockKey = calculateLockKey(wsComputer, agentInfo);
-        return lock(logger, flowNode, run, lockKey, () -> {
-            try {
-                loginTpmServer(logger, launcher, ws, agentInfo, tpmServerConfig);
-                //invokeJarSigner(logger);
-                getContext().onSuccess(null);
-            } catch (Exception e) {
-                getContext().onFailure(e);
-            } finally {
-                logoutTpmServer(logger, ws, agentInfo);
-            }
+        thread = new Thread(() -> {
+            executeInBackgroundThread(logger, ws, run, flowNode, launcher, wsComputer,
+                wsNode, nodeRoot, tpmServerConfig, credentials);
         });
+        thread.setName(Messages.JarSignerStep_functionName() + " execution");
+        thread.start();
+        return false;
     }
 
     @Override
@@ -92,20 +94,17 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
         PrintStream logger = getContext().get(TaskListener.class).getLogger();
         log(logger, "Stopping...");
 
+        Thread thread;
+        synchronized(this) {
+            thread = this.thread;
+        }
+
         if (thread == null) {
             getContext().onFailure(cause);
         } else {
-            // We let the thread take care of calling onSuccess()/onFailure().
+            // We let the thread take care of calling onSuccess()/onFailure()
+            // and to set this.thread to null.
             thread.interrupt();
-            try {
-                thread.join();
-            } catch (InterruptedException e) {
-                // Ignore this and let the caller call us again
-                // if it's not satisfied.
-            }
-            // Not using 'finally': only set null once we know the thread
-            // is gone, because it's legal for stop() to be called again.
-            thread = null;
         }
     }
 
@@ -126,29 +125,78 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
             + Messages.JarSignerStep_functionName()));
     }
 
-    private void loginTpmServer(PrintStream logger, Launcher launcher, FilePath ws,
-        AgentInfo agentInfo, TpmServerConfig tpmServerConfig)
-        throws InterruptedException, IOException, RuntimeException
+    private void executeInBackgroundThread(PrintStream logger, FilePath ws, Run<?, ?> run,
+        FlowNode flowNode, Launcher launcher, Computer wsComputer, Node wsNode,
+        FilePath nodeRoot, TpmServerConfig tpmServerConfig,
+        StandardUsernamePasswordCredentials credentials)
     {
-        invokePkcs11ConfigSetUrl(logger, launcher, ws, tpmServerConfig);
-        invokePkcs11ConfigTrust(logger, launcher, ws, tpmServerConfig);
-        //invokePkcs11ConfigGetGrant(logger, launcher, ws, tpmServerConfig);
+        try {
+            AgentInfo agentInfo = nodeRoot.act(new GetAgentInfo());
+            log(logger, "Detected OS: %s", agentInfo.osType);
+
+            FilePath certChainFile = null;
+
+            String lockKey = calculateLockKey(wsComputer, agentInfo);
+            lock(logger, flowNode, run, lockKey);
+            try {
+                certChainFile = ws.createTempFile("venafi-certchain", "crt");
+                loginTpmServer(logger, launcher, ws, run, agentInfo, tpmServerConfig,
+                    credentials, certChainFile);
+                //invokeJarSigner(logger);
+                getContext().onSuccess(null);
+            } finally {
+                logoutTpmServer(logger, ws, agentInfo);
+                unlock(logger, lockKey);
+                deleteFileOrPrintStackTrace(logger, certChainFile);
+            }
+        } catch (Exception e) {
+            getContext().onFailure(e);
+        } finally {
+            synchronized(this) {
+                thread = null;
+            }
+        }
     }
 
-    private void invokePkcs11ConfigSetUrl(PrintStream logger, Launcher launcher, FilePath ws,
-        TpmServerConfig tpmServerConfig)
+    private void loginTpmServer(PrintStream logger, Launcher launcher, FilePath ws,
+        Run<?, ?> run, AgentInfo agentInfo, TpmServerConfig tpmServerConfig,
+        StandardUsernamePasswordCredentials credentials, FilePath certChainFile)
+        throws InterruptedException, IOException, RuntimeException
+    {
+        invokePkcs11ConfigGetGrant(logger, launcher, ws, run, tpmServerConfig, credentials);
+        invokePkcs11ConfigTrust(logger, launcher, ws, tpmServerConfig);
+        invokePkcs11ConfigGetCertificate(logger, launcher, ws, certChainFile);
+    }
+
+    private void invokePkcs11ConfigGetGrant(PrintStream logger, Launcher launcher, FilePath ws,
+        Run<?, ?> run, TpmServerConfig tpmServerConfig,
+        StandardUsernamePasswordCredentials credentials)
         throws InterruptedException, IOException
     {
+        CredentialsProvider.track(run, credentials);
+        String password = Secret.toString(credentials.getPassword());
         invokeCommand(logger, launcher, ws,
-            "Logging into TPM server: configuring client: setting URL.",
-            "Successfully set URL configuration.",
-            "Error setting URL configuration",
-            "pkcs11config seturl",
+            "Logging into TPM server: configuring client: requesting grant from server.",
+            "Successfully gotten grant TPM server.",
+            "Error requesting grant from TPM server",
+            "pkcs11config getgrant",
             new String[]{
                 "pkcs11config",
-                "seturl",
+                "getgrant",
+                "--force",
                 "--authurl=" + tpmServerConfig.getAuthUrl(),
-                "--hsmurl=" + tpmServerConfig.getHsmUrl()
+                "--hsmurl=" + tpmServerConfig.getHsmUrl(),
+                "--username=" + credentials.getUsername(),
+                "--password=" + password
+            },
+            new boolean[] {
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                true
             });
     }
 
@@ -164,9 +212,29 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
             new String[]{
                 "pkcs11config",
                 "trust",
+                "--force",
                 "--hsmurl=" + tpmServerConfig.getHsmUrl()
-            });
+            },
+            null);
+    }
 
+    private void invokePkcs11ConfigGetCertificate(PrintStream logger, Launcher launcher, FilePath ws,
+        FilePath certChainFile)
+        throws InterruptedException, IOException
+    {
+        invokeCommand(logger, launcher, ws,
+            "Logging into TPM server: configuring client: fetching certificate chain for '"
+                + step.getCertLabel() + "'.",
+            "Successfully fetched certificate chain.",
+            "Error fetching certificate chain from TPM server",
+            "pkcs11config getcertificate",
+            new String[]{
+                "pkcs11config",
+                "getcertificate",
+                "--chainfile" + certChainFile.getRemote(),
+                "--label=" + step.getCertLabel(),
+            },
+            null);
     }
 
     private void logoutTpmServer(PrintStream logger, FilePath ws, AgentInfo agentInfo) {
@@ -189,7 +257,7 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
 
         log(logger, "Logging out of TPM server: deleting %s", libhsmtrust);
         try {
-            deleteFilePathInterruptionSafe(libhsmtrust);
+            deleteFileInterruptionSafe(libhsmtrust);
         } catch (InterruptedException e) {
             log(logger, "Error logging out of TPM server: operation interrupted");
             e.printStackTrace(logger);
@@ -212,7 +280,7 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
     // keep trying to delete the FilePath, and then re-throw the InterruptionException
     // afterwards. This method is useful if we really want to make sure that
     // the file is gone, even if we get interrupted ourselves.
-    private void deleteFilePathInterruptionSafe(FilePath path)
+    private void deleteFileInterruptionSafe(FilePath path)
         throws IOException, InterruptedException
     {
         InterruptedException interruption = null;
@@ -231,9 +299,19 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
         }
     }
 
+    private void deleteFileOrPrintStackTrace(PrintStream logger, FilePath file) {
+        try {
+            if (file != null) {
+                file.delete();
+            }
+        } catch (Exception e) {
+            e.printStackTrace(logger);
+        }
+    }
+
     private String invokeCommand(PrintStream logger, Launcher launcher, FilePath ws,
         String preMessage, String successMessage, String errorMessage,
-        String shortCommandLine, String[] cmdArgs)
+        String shortCommandLine, String[] cmdArgs, boolean[] masks)
         throws InterruptedException, IOException
     {
         log(logger, "%s", preMessage);
@@ -245,6 +323,9 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
             cmds(cmdArgs).
             stdout(output).
             pwd(ws);
+        if (masks != null) {
+            starter.masks(masks);
+        }
 
         Proc proc;
         int code;
@@ -271,44 +352,36 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
         logger.println("[" + step + "] " + String.format(format, args));
     }
 
-    private boolean lock(PrintStream logger, FlowNode flowNode, Run<?, ?> run, String key, Runnable continuation) {
-        thread = new Thread(() -> {
-            try {
-                synchronized(locks) {
-                    String prevLockHolder;
-                    do {
-                        logger.println("[" + step + "] Trying to acquire lock with key '" + key + "'");
-                        prevLockHolder = locks.putIfAbsent(key, run.toString());
-                        if (prevLockHolder != null) {
-                            logger.println("[" + step + "] Lock is already held by [" + prevLockHolder + "], waiting...");
-                            locks.wait();
-                            logger.println("[" + step + "] Lock has been released. Trying again.");
-                        }
-                    } while (prevLockHolder != null);
-                }
-            } catch (InterruptedException e) {
-                logger.println("[" + step + "] Thread interrupted.");
-                return;
+    private void lock(PrintStream logger, FlowNode flowNode, Run<?, ?> run, String key)
+        throws IOException, InterruptedException
+    {
+        flowNode.addAction(new PauseAction(Messages.JarSignerStep_functionName()));
+        try {
+            synchronized(locks) {
+                String prevLockHolder;
+                do {
+                    log(logger, "Trying to acquire lock with key '%s'", key);
+                    prevLockHolder = locks.putIfAbsent(key, run.toString());
+                    if (prevLockHolder != null) {
+                        log(logger, "Lock is already held by [%s], waiting...", prevLockHolder);
+                        locks.wait();
+                        log(logger, "Lock has been released. Trying again.");
+                    }
+                } while (prevLockHolder != null);
             }
 
-            try {
-                logger.println("[" + step + "] Lock successfully acquired.");
-                PauseAction.endCurrentPause(flowNode);
-                continuation.run();
-            } catch (IOException e) {
-                getContext().onFailure(e);
-            } finally {
-                logger.println("[" + step + "] Releasing lock with key '" + key + "'");
-                synchronized(locks) {
-                    locks.remove(key);
-                    locks.notifyAll();
-                }
-            }
-        });
-        thread.setName(Messages.JarSignerStep_functionName() + " execution");
-        thread.start();
-        flowNode.addAction(new PauseAction(Messages.JarSignerStep_functionName()));
-        return false;
+            log(logger, "Lock successfully acquired.");
+        } finally {
+            PauseAction.endCurrentPause(flowNode);
+        }
+    }
+
+    private void unlock(PrintStream logger, String key) {
+        log(logger, "Releasing lock with key '%s'", key);
+        synchronized(locks) {
+            locks.remove(key);
+            locks.notifyAll();
+        }
     }
 
     private String calculateLockKey(Computer computer, AgentInfo agentInfo)
