@@ -24,7 +24,7 @@ import org.kohsuke.stapler.QueryParameter;
 public class JarSignerStep extends Step implements Serializable {
     private static final long serialVersionUID = 1;
 
-    private String tpmServerName;
+    private String tppName;
     private String jarFile;
     private String certLabel;
 
@@ -32,13 +32,13 @@ public class JarSignerStep extends Step implements Serializable {
     public JarSignerStep() {
     }
 
-    public String getTpmServerName() {
-        return tpmServerName;
+    public String getTppName() {
+        return tppName;
     }
 
     @DataBoundSetter
-    public void setTpmServerName(String value) {
-        this.tpmServerName = value;
+    public void setTppName(String value) {
+        this.tppName = value;
     }
 
     public String getJarFile() {
@@ -96,9 +96,9 @@ public class JarSignerStep extends Step implements Serializable {
             return REQUIRED_CONTEXTS;
         }
 
-        public ListBoxModel doFillTpmServerNameItems() {
+        public ListBoxModel doFillTppNameItems() {
             ListBoxModel items = new ListBoxModel();
-            for (TpmServerConfig config : PluginConfig.get().getTpmServerConfigs()) {
+            for (TppConfig config : PluginConfig.get().getTppConfigs()) {
                 items.add(config.getName(), config.getName());
             }
             return items;

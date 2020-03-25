@@ -60,24 +60,24 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
             throw new IOException("Unable to retrieve root path of node");
         }
 
-        log(logger, "Using TPM server configuration: %s", step.getTpmServerName());
-        TpmServerConfig tpmServerConfig = PluginConfig.get().getTpmServerConfigByName(
-            step.getTpmServerName());
-        if (tpmServerConfig == null) {
-            throw new RuntimeException("No TPM server configuration with name '"
-                + step.getTpmServerName() + "' found");
+        log(logger, "Using Venafi TPP configuration: %s", step.getTppName());
+        TppConfig tppConfig = PluginConfig.get().getTppConfigByName(
+            step.getTppName());
+        if (tppConfig == null) {
+            throw new RuntimeException("No Venafi TPP configuration with name '"
+                + step.getTppName() + "' found");
         }
 
         StandardUsernamePasswordCredentials credentials = Utils.findCredentials(
-            tpmServerConfig.getCredentialsId());
+            tppConfig.getCredentialsId());
         if (credentials == null) {
             throw new RuntimeException("No credentials with ID '"
-                + tpmServerConfig.getCredentialsId() + "' found");
+                + tppConfig.getCredentialsId() + "' found");
         }
 
         Thread thread = new Thread(() -> {
             executeInBackgroundThread(logger, ws, run, flowNode, launcher, wsComputer,
-                wsNode, nodeRoot, tpmServerConfig, credentials);
+                wsNode, nodeRoot, tppConfig, credentials);
         });
         thread.setName(Messages.JarSignerStep_functionName() + " execution");
         synchronized(this) {
@@ -126,7 +126,7 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
 
     private void executeInBackgroundThread(PrintStream logger, FilePath ws, Run<?, ?> run,
         FlowNode flowNode, Launcher launcher, Computer wsComputer, Node wsNode,
-        FilePath nodeRoot, TpmServerConfig tpmServerConfig,
+        FilePath nodeRoot, TppConfig tppConfig,
         StandardUsernamePasswordCredentials credentials)
     {
         try {
@@ -143,12 +143,12 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
 
                 certChainFile = ws.createTempFile("venafi-certchain", "crt");
 
-                loginTpmServer(logger, launcher, ws, run, agentInfo, tpmServerConfig,
+                loginTpp(logger, launcher, ws, run, agentInfo, tppConfig,
                     credentials, certChainFile);
                 //invokeJarSigner(logger);
                 getContext().onSuccess(null);
             } finally {
-                logoutTpmServer(logger, ws, agentInfo);
+                logoutTpp(logger, ws, agentInfo);
                 unlock(logger, lockKey);
                 deleteFileOrPrintStackTrace(logger, certChainFile);
             }
@@ -162,34 +162,34 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
         }
     }
 
-    private void loginTpmServer(PrintStream logger, Launcher launcher, FilePath ws,
-        Run<?, ?> run, AgentInfo agentInfo, TpmServerConfig tpmServerConfig,
+    private void loginTpp(PrintStream logger, Launcher launcher, FilePath ws,
+        Run<?, ?> run, AgentInfo agentInfo, TppConfig tppConfig,
         StandardUsernamePasswordCredentials credentials, FilePath certChainFile)
         throws InterruptedException, IOException, RuntimeException
     {
-        invokePkcs11ConfigGetGrant(logger, launcher, ws, run, tpmServerConfig, credentials);
-        invokePkcs11ConfigTrust(logger, launcher, ws, tpmServerConfig);
+        invokePkcs11ConfigGetGrant(logger, launcher, ws, run, tppConfig, credentials);
+        invokePkcs11ConfigTrust(logger, launcher, ws, tppConfig);
         invokePkcs11ConfigGetCertificate(logger, launcher, ws, certChainFile);
     }
 
     private void invokePkcs11ConfigGetGrant(PrintStream logger, Launcher launcher, FilePath ws,
-        Run<?, ?> run, TpmServerConfig tpmServerConfig,
+        Run<?, ?> run, TppConfig tppConfig,
         StandardUsernamePasswordCredentials credentials)
         throws InterruptedException, IOException
     {
         CredentialsProvider.track(run, credentials);
         String password = Secret.toString(credentials.getPassword());
         invokeCommand(logger, launcher, ws,
-            "Logging into TPM server: configuring client: requesting grant from server.",
-            "Successfully gotten grant TPM server.",
-            "Error requesting grant from TPM server",
+            "Logging into TPP: configuring client: requesting grant from server.",
+            "Successfully gotten grant TPP.",
+            "Error requesting grant from TPP",
             "pkcs11config getgrant",
             new String[]{
                 "pkcs11config",
                 "getgrant",
                 "--force",
-                "--authurl=" + tpmServerConfig.getAuthUrl(),
-                "--hsmurl=" + tpmServerConfig.getHsmUrl(),
+                "--authurl=" + tppConfig.getAuthUrl(),
+                "--hsmurl=" + tppConfig.getHsmUrl(),
                 "--username=" + credentials.getUsername(),
                 "--password=" + password
             },
@@ -205,19 +205,19 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
     }
 
     private void invokePkcs11ConfigTrust(PrintStream logger, Launcher launcher, FilePath ws,
-        TpmServerConfig tpmServerConfig)
+        TppConfig tppConfig)
         throws InterruptedException, IOException
     {
         invokeCommand(logger, launcher, ws,
-            "Logging into TPM server: configuring client: establishing trust with server.",
-            "Successfully established trust with TPM server.",
-            "Error establishing trust with TPM server",
+            "Logging into TPP: configuring client: establishing trust with server.",
+            "Successfully established trust with TPP.",
+            "Error establishing trust with TPP",
             "pkcs11config trust",
             new String[]{
                 "pkcs11config",
                 "trust",
                 "--force",
-                "--hsmurl=" + tpmServerConfig.getHsmUrl()
+                "--hsmurl=" + tppConfig.getHsmUrl()
             },
             null);
     }
@@ -227,10 +227,10 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
         throws InterruptedException, IOException
     {
         invokeCommand(logger, launcher, ws,
-            "Logging into TPM server: configuring client: fetching certificate chain for '"
+            "Logging into TPP: configuring client: fetching certificate chain for '"
                 + step.getCertLabel() + "'.",
             "Successfully fetched certificate chain.",
-            "Error fetching certificate chain from TPM server",
+            "Error fetching certificate chain from TPP",
             "pkcs11config getcertificate",
             new String[]{
                 "pkcs11config",
@@ -241,10 +241,10 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
             null);
     }
 
-    private void logoutTpmServer(PrintStream logger, FilePath ws, AgentInfo agentInfo) {
+    private void logoutTpp(PrintStream logger, FilePath ws, AgentInfo agentInfo) {
         if (!agentInfo.osType.isUnixCompatible()) {
             // TODO: remove credentials from Windows registry
-            log(logger, "WARNING: TPM server logout not yet implemented for Windows nodes");
+            log(logger, "WARNING: TPP logout not yet implemented for Windows nodes");
             return;
         }
 
@@ -259,23 +259,23 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
         FilePath libhsmtrust = home.child(".libhsmtrust");
         FilePath libhsmconfig = home.child(".libhsmconfig");
 
-        log(logger, "Logging out of TPM server: deleting %s", libhsmtrust);
+        log(logger, "Logging out of TPP: deleting %s", libhsmtrust);
         try {
             deleteFileInterruptionSafe(libhsmtrust);
         } catch (InterruptedException e) {
-            log(logger, "Error logging out of TPM server: operation interrupted");
+            log(logger, "Error logging out of TPP: operation interrupted");
             e.printStackTrace(logger);
             return;
         } catch (Exception e) {
-            log(logger, "Error logging out of TPM server: %s", e.getMessage());
+            log(logger, "Error logging out of TPP: %s", e.getMessage());
             e.printStackTrace(logger);
         }
 
-        log(logger, "Logging out of TPM server: deleting %s", libhsmconfig);
+        log(logger, "Logging out of TPP: deleting %s", libhsmconfig);
         try {
             libhsmconfig.delete();
         } catch (Exception e) {
-            log(logger, "Error logging out of TPM server: %s", e.getMessage());
+            log(logger, "Error logging out of TPP: %s", e.getMessage());
             e.printStackTrace(logger);
         }
     }

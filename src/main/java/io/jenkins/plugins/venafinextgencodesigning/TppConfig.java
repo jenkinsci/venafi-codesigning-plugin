@@ -26,15 +26,15 @@ import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredenti
 import com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 
-@XStreamAlias("tpm-server-config")
-public class TpmServerConfig extends AbstractDescribableImpl<TpmServerConfig> {
+@XStreamAlias("tpp-config")
+public class TppConfig extends AbstractDescribableImpl<TppConfig> {
     private String name;
     private String authUrl;
     private String hsmUrl;
     private final String credentialsId;
 
     @DataBoundConstructor
-    public TpmServerConfig(String credentialsId) {
+    public TppConfig(String credentialsId) {
         this.credentialsId = credentialsId;
     }
 
@@ -70,10 +70,10 @@ public class TpmServerConfig extends AbstractDescribableImpl<TpmServerConfig> {
     }
 
     @Extension
-    public static class DescriptorImpl extends Descriptor<TpmServerConfig> {
+    public static class DescriptorImpl extends Descriptor<TppConfig> {
         @Override
         public String getDisplayName() {
-            return Messages.TpmServerConfig_displayName();
+            return Messages.TppConfig_displayName();
         }
 
         public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Item item, @QueryParameter String credentialsId) {
@@ -115,7 +115,7 @@ public class TpmServerConfig extends AbstractDescribableImpl<TpmServerConfig> {
                 new URL(value);
             } catch (MalformedURLException e) {
                 return FormValidation.error(
-                    Messages.TpmServerConfig_authUrlMalformed(),
+                    Messages.TppConfig_authUrlMalformed(),
                     e.getMessage());
             }
 
@@ -132,7 +132,7 @@ public class TpmServerConfig extends AbstractDescribableImpl<TpmServerConfig> {
                 new URL(value);
             } catch (MalformedURLException e) {
                 return FormValidation.error(
-                    Messages.TpmServerConfig_hsmUrlMalformed(),
+                    Messages.TppConfig_hsmUrlMalformed(),
                     e.getMessage());
             }
 

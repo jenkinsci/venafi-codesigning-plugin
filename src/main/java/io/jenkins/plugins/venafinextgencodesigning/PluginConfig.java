@@ -23,7 +23,7 @@ public class PluginConfig extends GlobalConfiguration {
     public static final String CONFIGURATION_ID = "venafi-code-signing-plugin-configuration";
     public static final PluginConfig EMPTY_CONFIG = new PluginConfig(Collections.emptyList());
 
-    private List<TpmServerConfig> tpmServerConfigs = new ArrayList<>();
+    private List<TppConfig> tppConfigs = new ArrayList<>();
 
     @Nonnull
     public static PluginConfig get() {
@@ -39,18 +39,18 @@ public class PluginConfig extends GlobalConfiguration {
         load();
     }
 
-    public PluginConfig(List<TpmServerConfig> tpmServerConfigs) {
-        this.tpmServerConfigs = tpmServerConfigs;
+    public PluginConfig(List<TppConfig> tppConfigs) {
+        this.tppConfigs = tppConfigs;
     }
 
     @Nonnull
-    public List<TpmServerConfig> getTpmServerConfigs() {
-        return tpmServerConfigs;
+    public List<TppConfig> getTppConfigs() {
+        return tppConfigs;
     }
 
     @Nullable
-    public TpmServerConfig getTpmServerConfigByName(String name) {
-        for (TpmServerConfig config: tpmServerConfigs) {
+    public TppConfig getTppConfigByName(String name) {
+        for (TppConfig config: tppConfigs) {
             if (config.getName().equals(name)) {
                 return config;
             }
@@ -59,8 +59,8 @@ public class PluginConfig extends GlobalConfiguration {
     }
 
     @DataBoundSetter
-    public void setTpmServerConfigs(List<TpmServerConfig> value) {
-        this.tpmServerConfigs = value;
+    public void setTppConfigs(List<TppConfig> value) {
+        this.tppConfigs = value;
     }
 
     @Override
@@ -83,10 +83,10 @@ public class PluginConfig extends GlobalConfiguration {
                 e, CONFIGURATION_ID);
         }
 
-        String duplicateName = findDuplicateServerConfigName(tpmServerConfigs);
+        String duplicateName = findDuplicateServerConfigName(tppConfigs);
         if (duplicateName != null) {
             throw new FormException(
-                String.format(Messages.PluginConfig_duplicateTpmServerConfigName(), duplicateName),
+                String.format(Messages.PluginConfig_duplicateTppConfigName(), duplicateName),
                 CONFIGURATION_ID);
         }
 
@@ -99,9 +99,9 @@ public class PluginConfig extends GlobalConfiguration {
         return Messages.PluginConfig_displayName();
     }
 
-    private String findDuplicateServerConfigName(List<TpmServerConfig> tpmServerConfigs) {
+    private String findDuplicateServerConfigName(List<TppConfig> tppConfigs) {
         Set<String> namesSeen = new HashSet<>();
-        for (TpmServerConfig config: tpmServerConfigs) {
+        for (TppConfig config: tppConfigs) {
             if (!namesSeen.add(config.getName())) {
                 return config.getName();
             }
