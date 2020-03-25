@@ -138,7 +138,11 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
             String lockKey = calculateLockKey(wsComputer, launcher, agentInfo);
             lock(logger, flowNode, run, lockKey);
             try {
+                // Jenkins does not necessarily guarantee that our workspace exists.
+                ws.mkdirs();
+
                 certChainFile = ws.createTempFile("venafi-certchain", "crt");
+
                 loginTpmServer(logger, launcher, ws, run, agentInfo, tpmServerConfig,
                     credentials, certChainFile);
                 //invokeJarSigner(logger);
