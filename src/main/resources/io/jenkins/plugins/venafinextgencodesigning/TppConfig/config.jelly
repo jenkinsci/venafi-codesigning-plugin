@@ -8,7 +8,7 @@
         <f:textbox />
     </f:entry>
 
-    <f:entry title="${%Virtual HSM URL}" field="hsmUrl">
+    <f:entry title="${%HSM URL}" field="hsmUrl">
         <f:textbox />
     </f:entry>
 
