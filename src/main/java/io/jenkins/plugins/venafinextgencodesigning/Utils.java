@@ -78,4 +78,34 @@ public class Utils {
             throw new IOException("Error determining node's FQDN: command 'hostname -f' exited with code " + code);
         }
     }
+
+    public static void deleteWindowsRegistry(Logger logger, Launcher launcher, String path)
+        throws IOException, InterruptedException
+    {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        Launcher.ProcStarter starter =
+            launcher.
+            launch().
+            cmds(
+                "reg",
+                "delete",
+                path,
+                "/va",
+                "/f"
+            ).
+            stdout(output).
+            quiet(true);
+
+        Proc proc = starter.start();
+        int code = proc.join();
+
+        if (code != 0) {
+            String outputStr = output.toString("UTF-8").trim();
+            if (outputStr.indexOf("The system was unable to find the specified registry key or value", 0) != -1) {
+                throw new IOException("Error deleting Windows registry key '" + path
+                    + "': the 'reg' command exited with code " + code
+                    + " and the following output: " + outputStr);
+            }
+        }
+    }
 }

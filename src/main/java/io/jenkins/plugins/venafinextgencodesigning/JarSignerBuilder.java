@@ -111,7 +111,7 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
                 credentials, certChainFile);
             //invokeJarSigner(logger);
         } finally {
-            logoutTpp(logger, workspace, agentInfo);
+            logoutTpp(logger, launcher, workspace, agentInfo);
             LOCK_MANAGER.unlock(logger, lockKey);
             deleteFileOrPrintStackTrace(logger, certChainFile);
         }
@@ -202,10 +202,14 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
             null);
     }
 
-    private void logoutTpp(Logger logger, FilePath ws, AgentInfo agentInfo) {
+    private void logoutTpp(Logger logger, Launcher launcher, FilePath ws, AgentInfo agentInfo) {
         if (!agentInfo.osType.isUnixCompatible()) {
-            // TODO: remove credentials from Windows registry
-            logger.log("WARNING: TPP logout not yet implemented for Windows nodes");
+            logger.log("Logging out of TPP: deleting Venafi libhsm registry entry.");
+            try {
+                Utils.deleteWindowsRegistry(logger, launcher, "HKCU\\Software\\Venafi\\libhsm");
+            } catch (Exception e) {
+                e.printStackTrace(logger.getOutput());
+            }
             return;
         }
 
