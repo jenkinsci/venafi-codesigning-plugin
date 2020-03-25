@@ -313,7 +313,7 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
         }
     }
 
-    @Symbol("venafiCodeSignWithJarSigner2")
+    @Symbol("venafiCodeSignWithJarSigner")
     @Extension
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
         @SuppressWarnings("rawtypes")
