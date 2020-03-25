@@ -34,6 +34,7 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
     private String tppName;
     private String jarFile;
     private String certLabel;
+    private String venafiCodeSigningInstallDir;
 
     @DataBoundConstructor
     public JarSignerBuilder() {
@@ -64,6 +65,19 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
     @DataBoundSetter
     public void setCertLabel(String value) {
         this.certLabel = value;
+    }
+
+    public String getVenafiCodeSigningInstallDir() {
+        return venafiCodeSigningInstallDir;
+    }
+
+    @DataBoundSetter
+    public void setVenafiCodeSigningInstallDir(String value) {
+        if (value.equals("")) {
+            this.venafiCodeSigningInstallDir = null;
+        } else {
+            this.venafiCodeSigningInstallDir = value;
+        }
     }
 
     @Override
@@ -107,9 +121,9 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
         try {
             certChainFile = workspace.createTempFile("venafi-certchain", "crt");
 
-            loginTpp(logger, launcher, workspace, run, agentInfo, tppConfig,
+            loginTpp(logger, launcher, workspace, nodeRoot, run, agentInfo, tppConfig,
                 credentials, certChainFile);
-            //invokeJarSigner(logger);
+            invokeJarSigner(logger, launcher, workspace, agentInfo, certChainFile);
         } finally {
             logoutTpp(logger, launcher, workspace, agentInfo);
             LOCK_MANAGER.unlock(logger, lockKey);
@@ -124,20 +138,22 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
     }
 
     private void loginTpp(Logger logger, Launcher launcher, FilePath ws,
-        Run<?, ?> run, AgentInfo agentInfo, TppConfig tppConfig,
+        FilePath nodeRoot, Run<?, ?> run, AgentInfo agentInfo, TppConfig tppConfig,
         StandardUsernamePasswordCredentials credentials, FilePath certChainFile)
         throws InterruptedException, IOException, RuntimeException
     {
-        invokePkcs11ConfigGetGrant(logger, launcher, ws, run, tppConfig, credentials);
-        invokePkcs11ConfigTrust(logger, launcher, ws, tppConfig);
-        invokePkcs11ConfigGetCertificate(logger, launcher, ws, certChainFile);
+        invokePkcs11ConfigGetGrant(logger, launcher, ws, nodeRoot, run, tppConfig,
+            agentInfo, credentials);
+        invokePkcs11ConfigGetCertificate(logger, launcher, ws, nodeRoot, agentInfo,
+            certChainFile);
     }
 
     private void invokePkcs11ConfigGetGrant(Logger logger, Launcher launcher, FilePath ws,
-        Run<?, ?> run, TppConfig tppConfig,
+        FilePath nodeRoot, Run<?, ?> run, TppConfig tppConfig, AgentInfo agentInfo,
         StandardUsernamePasswordCredentials credentials)
         throws InterruptedException, IOException
     {
+        FilePath pkcs11ConfigToolPath = getPkcs11ConfigToolPath(agentInfo, nodeRoot);
         CredentialsProvider.track(run, credentials);
         String password = Secret.toString(credentials.getPassword());
         invokeCommand(logger, launcher, ws,
@@ -146,7 +162,7 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
             "Error requesting grant from TPP",
             "pkcs11config getgrant",
             new String[]{
-                "pkcs11config",
+                pkcs11ConfigToolPath.getRemote(),
                 "getgrant",
                 "--force",
                 "--authurl=" + tppConfig.getAuthUrl(),
@@ -165,28 +181,11 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
             });
     }
 
-    private void invokePkcs11ConfigTrust(Logger logger, Launcher launcher, FilePath ws,
-        TppConfig tppConfig)
-        throws InterruptedException, IOException
-    {
-        invokeCommand(logger, launcher, ws,
-            "Logging into TPP: configuring client: establishing trust with server.",
-            "Successfully established trust with TPP.",
-            "Error establishing trust with TPP",
-            "pkcs11config trust",
-            new String[]{
-                "pkcs11config",
-                "trust",
-                "--force",
-                "--hsmurl=" + tppConfig.getHsmUrl()
-            },
-            null);
-    }
-
     private void invokePkcs11ConfigGetCertificate(Logger logger, Launcher launcher, FilePath ws,
-        FilePath certChainFile)
+        FilePath nodeRoot, AgentInfo agentInfo, FilePath certChainFile)
         throws InterruptedException, IOException
     {
+        FilePath pkcs11ConfigToolPath = getPkcs11ConfigToolPath(agentInfo, nodeRoot);
         invokeCommand(logger, launcher, ws,
             "Logging into TPP: configuring client: fetching certificate chain for '"
                 + getCertLabel() + "'.",
@@ -194,9 +193,9 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
             "Error fetching certificate chain from TPP",
             "pkcs11config getcertificate",
             new String[]{
-                "pkcs11config",
+                pkcs11ConfigToolPath.getRemote(),
                 "getcertificate",
-                "--chainfile" + certChainFile.getRemote(),
+                "--chainfile=" + certChainFile.getRemote(),
                 "--label=" + getCertLabel(),
             },
             null);
@@ -243,6 +242,47 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
             logger.log("Error logging out of TPP: %s", e.getMessage());
             e.printStackTrace(logger.getOutput());
         }
+    }
+
+    private void invokeJarSigner(Logger logger, Launcher launcher, FilePath ws,
+        AgentInfo agentInfo, FilePath certChainFile)
+        throws InterruptedException, IOException
+    {
+        String[] commandArgs;
+        if (agentInfo.osType == OsType.MACOS) {
+            commandArgs = new String[] {
+                "jarsigner",
+                "-verbose",
+                "-keystore", "NONE",
+                "-storetype", "PKCS11",
+                "-storepass", "bogus",
+                "-providerclass", "sun.security.pkcs11.SunPKCS11",
+                "-providerArg", "????",
+                "-certs",
+                "-certchain", certChainFile.getRemote(),
+                getJarFile(),
+                getCertLabel()
+            };
+        } else {
+            commandArgs = new String[] {
+                "jarsigner",
+                "-verbose",
+                "-keystore", "NONE",
+                "-storetype", "PKCS11",
+                "-storepass", "bogus",
+                "-certs",
+                "-certchain", certChainFile.getRemote(),
+                getJarFile(),
+                getCertLabel()
+            };
+        }
+        invokeCommand(logger, launcher, ws,
+            "Signing with jarsigner: " + getJarFile() + "",
+            "Successfully signed '" + getJarFile() + "'.",
+            "Error signing '" + getJarFile() + "'",
+            "jarsigner",
+            commandArgs,
+            null);
     }
 
     // Deletes the given FilePath. If the thread is interrupted, then it will
@@ -314,6 +354,31 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
                 "%s: command exited with code %d. Output from command '%s' is as follows:\n%s",
                 errorMessage, code, shortCommandLine, output.toString("UTF-8"));
             throw new AbortException(errorMessage + ": command exited with code " + code);
+        }
+    }
+
+    private FilePath detectVenafiCodeSigningInstallDir(AgentInfo agentInfo, FilePath nodeRoot) {
+        if (getVenafiCodeSigningInstallDir() != null) {
+            return nodeRoot.child(getVenafiCodeSigningInstallDir());
+        } else if (agentInfo.osType == OsType.MACOS) {
+            return nodeRoot.child("/Library/Venafi/CodeSigning");
+        } else if (agentInfo.osType == OsType.WINDOWS) {
+            String programFiles = System.getenv("ProgramFiles");
+            if (programFiles == null) {
+                programFiles = "C:\\Program Files";
+            }
+            return nodeRoot.child(programFiles).child("Venafi");
+        } else {
+            return nodeRoot.child("/opt/venafi/codesign");
+        }
+    }
+
+    private FilePath getPkcs11ConfigToolPath(AgentInfo agentInfo, FilePath nodeRoot) {
+        FilePath toolsDir = detectVenafiCodeSigningInstallDir(agentInfo, nodeRoot);
+        if (agentInfo.osType == OsType.WINDOWS) {
+            return toolsDir.child("PKCS11").child("PKCS11Config.exe");
+        } else {
+            return toolsDir.child("bin").child("pkcs11config");
         }
     }
 
