@@ -114,19 +114,24 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
         AgentInfo agentInfo = nodeRoot.act(new AgentInfo.GetAgentInfo());
         logger.log("Detected OS: %s", agentInfo.osType);
 
+        FilePath pkcs11ProviderConfigFile = null;
         FilePath certChainFile = null;
 
         String lockKey = calculateLockKey(wsComputer, launcher, agentInfo);
         LOCK_MANAGER.lock(logger, run, lockKey);
         try {
-            certChainFile = workspace.createTempFile("venafi-certchain", "crt");
+            pkcs11ProviderConfigFile = workspace.createTempFile("pkcs11-provider", ".conf");
+            certChainFile = workspace.createTempFile("venafi-certchain", ".crt");
 
+            createPkcs11ProviderConfig(agentInfo, nodeRoot, pkcs11ProviderConfigFile);
             loginTpp(logger, launcher, workspace, nodeRoot, run, agentInfo, tppConfig,
                 credentials, certChainFile);
-            invokeJarSigner(logger, launcher, workspace, agentInfo, certChainFile);
+            invokeJarSigner(logger, launcher, workspace, agentInfo,
+                pkcs11ProviderConfigFile, certChainFile);
         } finally {
             logoutTpp(logger, launcher, workspace, agentInfo);
             LOCK_MANAGER.unlock(logger, lockKey);
+            deleteFileOrPrintStackTrace(logger, pkcs11ProviderConfigFile);
             deleteFileOrPrintStackTrace(logger, certChainFile);
         }
     }
@@ -135,6 +140,18 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
         throws IOException, InterruptedException
     {
         return Utils.getFqdn(computer, launcher, agentInfo) + ":" + agentInfo.username;
+    }
+
+    private void createPkcs11ProviderConfig(AgentInfo agentInfo, FilePath nodeRoot, FilePath file)
+        throws IOException, InterruptedException
+    {
+        String contents = String.format(
+            "name = VenafiPKCS11\n"
+            + "library = \"%s\"\n"
+            + "slot = 0\n",
+            getPkcs11DriverLibraryPath(agentInfo, nodeRoot).getRemote()
+        );
+        file.write(contents, "UTF-8");
     }
 
     private void loginTpp(Logger logger, Launcher launcher, FilePath ws,
@@ -245,43 +262,27 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
     }
 
     private void invokeJarSigner(Logger logger, Launcher launcher, FilePath ws,
-        AgentInfo agentInfo, FilePath certChainFile)
+        AgentInfo agentInfo, FilePath pkcs11ProviderConfigFile, FilePath certChainFile)
         throws InterruptedException, IOException
     {
-        String[] commandArgs;
-        if (agentInfo.osType == OsType.MACOS) {
-            commandArgs = new String[] {
+        invokeCommand(logger, launcher, ws,
+            "Signing with jarsigner: " + getJarFile() + "",
+            "Successfully signed '" + getJarFile() + "'.",
+            "Error signing '" + getJarFile() + "'",
+            "jarsigner",
+            new String[]{
                 "jarsigner",
                 "-verbose",
                 "-keystore", "NONE",
                 "-storetype", "PKCS11",
                 "-storepass", "bogus",
                 "-providerclass", "sun.security.pkcs11.SunPKCS11",
-                "-providerArg", "????",
+                "-providerArg", pkcs11ProviderConfigFile.getRemote(),
                 "-certs",
                 "-certchain", certChainFile.getRemote(),
                 getJarFile(),
                 getCertLabel()
-            };
-        } else {
-            commandArgs = new String[] {
-                "jarsigner",
-                "-verbose",
-                "-keystore", "NONE",
-                "-storetype", "PKCS11",
-                "-storepass", "bogus",
-                "-certs",
-                "-certchain", certChainFile.getRemote(),
-                getJarFile(),
-                getCertLabel()
-            };
-        }
-        invokeCommand(logger, launcher, ws,
-            "Signing with jarsigner: " + getJarFile() + "",
-            "Successfully signed '" + getJarFile() + "'.",
-            "Error signing '" + getJarFile() + "'",
-            "jarsigner",
-            commandArgs,
+            },
             null);
     }
 
@@ -379,6 +380,15 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
             return toolsDir.child("PKCS11").child("PKCS11Config.exe");
         } else {
             return toolsDir.child("bin").child("pkcs11config");
+        }
+    }
+
+    private FilePath getPkcs11DriverLibraryPath(AgentInfo agentInfo, FilePath nodeRoot) {
+        FilePath toolsDir = detectVenafiCodeSigningInstallDir(agentInfo, nodeRoot);
+        if (agentInfo.osType == OsType.WINDOWS) {
+            return toolsDir.child("PKCS11").child("VenafiPkcs11.dll");
+        } else {
+            return toolsDir.child("lib").child("venafipkcs11.so");
         }
     }
 
