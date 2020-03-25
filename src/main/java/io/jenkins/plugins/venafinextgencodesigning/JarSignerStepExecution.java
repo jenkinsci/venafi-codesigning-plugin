@@ -153,6 +153,7 @@ public class JarSignerStepExecution extends AbstractStepExecutionImpl {
                 deleteFileOrPrintStackTrace(logger, certChainFile);
             }
         } catch (Exception e) {
+            log(logger, "ERROR: %s", e.getMessage());
             getContext().onFailure(e);
         } finally {
             synchronized(this) {
