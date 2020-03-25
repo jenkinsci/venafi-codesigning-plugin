@@ -79,22 +79,26 @@
             <version>2.0</version>
         </dependency>
 
-        <!-- Test dependencies -->
+        <!-- Dependencies for allowing inspection with IntelliSense.
+             Keep them commented out; only temporarily uncomment them
+             when needing IntelliSense.
+         -->
+        <!-- <dependency>
+            <groupId>org.jenkins-ci.plugins.workflow</groupId>
+            <artifactId>workflow-step-api</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-cps</artifactId>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-basic-steps</artifactId>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-durable-task-step</artifactId>
-            <scope>test</scope>
-        </dependency>
+        </dependency> -->
     </dependencies>
 
     <!-- Assuming you want to host on @jenkinsci:
