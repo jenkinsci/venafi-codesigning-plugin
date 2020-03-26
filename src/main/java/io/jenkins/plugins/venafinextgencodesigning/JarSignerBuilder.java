@@ -28,12 +28,22 @@ import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 public class JarSignerBuilder extends Builder implements SimpleBuildStep {
+    @SuppressFBWarnings("UUF_UNUSED_FIELD")
     private static transient LockManager LOCK_MANAGER = new LockManager();
 
+    @SuppressFBWarnings("UUF_UNUSED_FIELD")
     private String tppName;
+
+    @SuppressFBWarnings("UUF_UNUSED_FIELD")
     private String jarFile;
+
+    @SuppressFBWarnings("UUF_UNUSED_FIELD")
     private String certLabel;
+
+    @SuppressFBWarnings("UUF_UNUSED_FIELD")
     private String venafiCodeSigningInstallDir;
 
     @DataBoundConstructor
@@ -146,9 +156,9 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
         throws IOException, InterruptedException
     {
         String contents = String.format(
-            "name = VenafiPKCS11\n"
-            + "library = \"%s\"\n"
-            + "slot = 0\n",
+            "name = VenafiPKCS11%n"
+            + "library = \"%s\"%n"
+            + "slot = 0%n",
             getPkcs11DriverLibraryPath(agentInfo, nodeRoot).getRemote()
         );
         file.write(contents, "UTF-8");
