@@ -6,32 +6,29 @@
         {
             "label": "Build plugin & run Jenkins",
             "type": "process",
-            "command": "mvn",
-            "args": [
-                "-o",
-                "hpi:run"
-            ],
-            "options": {
-                "env": {
-                    // https://ryanharrison.co.uk/2018/04/29/faster-java-startup-time.html
-                    "JAVA_OPTS": "-client -Xverify:none -XX:TieredStopAtLevel=1"
+            "command": "./devscripts/run.sh",
+            "isBackground": true,
+            "problemMatcher": {
+                "pattern": [{
+                    "regexp": "^nonexistant regex$",
+                    "file": 1,
+                    "location": 2,
+                    "message": 3
+                }],
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^Building Venafi",
+                    "endsPattern": "^Jenkins home directory:"
                 }
             },
-            "isBackground": true,
             "group": "build"
         },
         {
             "label": "Build plugin & run Jenkins (debug mode)",
             "type": "process",
-            "command": "mvn",
-            "args": [
-                "-o",
-                "hpi:run"
-            ],
+            "command": "./devscripts/run.sh",
             "options": {
                 "env": {
-                    // https://ryanharrison.co.uk/2018/04/29/faster-java-startup-time.html
-                    "JAVA_OPTS": "-client -Xverify:none -XX:TieredStopAtLevel=1",
                     "MAVEN_OPTS": "-Xdebug -Xrunjdwp:transport=dt_socket,server=y,address=8271,suspend=n"
                 }
             },
@@ -58,13 +55,7 @@
             // Run this task if Jenkins can't detect our plugin.
             "label": "Clean",
             "type": "shell",
-            "command": "rm -rf target && mvn -o clean",
-            "options": {
-                "env": {
-                    // https://ryanharrison.co.uk/2018/04/29/faster-java-startup-time.html
-                    "JAVA_OPTS": "-client -Xverify:none -XX:TieredStopAtLevel=1"
-                }
-            },
+            "command": "rm -rf target",
             "group": "build",
             "problemMatcher": []
         }
