@@ -24,6 +24,8 @@ import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 
 import jenkins.tasks.SimpleBuildStep;
+
+import org.apache.commons.lang.StringEscapeUtils;
 import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
@@ -155,11 +157,12 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
     private void createPkcs11ProviderConfig(AgentInfo agentInfo, FilePath nodeRoot, FilePath file)
         throws IOException, InterruptedException
     {
+        String libpath = getPkcs11DriverLibraryPath(agentInfo, nodeRoot).getRemote();
         String contents = String.format(
             "name = VenafiPKCS11%n"
             + "library = \"%s\"%n"
             + "slot = 0%n",
-            getPkcs11DriverLibraryPath(agentInfo, nodeRoot).getRemote()
+            StringEscapeUtils.unescapeJava(libpath)
         );
         file.write(contents, "UTF-8");
     }
