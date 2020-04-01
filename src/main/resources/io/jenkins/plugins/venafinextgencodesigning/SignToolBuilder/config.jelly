@@ -1,0 +1,27 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+    <f:entry title="${%Select Venafi TPP}" field="tppName">
+        <f:select />
+    </f:entry>
+    <f:entry title="${%File path or glob}" field="fileOrGlob">
+        <f:textbox />
+    </f:entry>
+    <f:entry title="${%Signing certificate subject name}" field="subjectName">
+        <f:textbox />
+    </f:entry>
+    <f:entry title="${%Signing certificate SHA-1 hash}" field="sha1">
+        <f:textbox />
+    </f:entry>
+    <f:entry title="${%Signature digest algorithms}" field="signatureDigestAlgos">
+        <f:textbox />
+    </f:entry>
+    <f:entry title="${%Append signatures}" field="appendSignatures">
+        <f:checkbox />
+    </f:entry>
+    <f:entry title="${%Signtool install directory}" field="signToolInstallDir">
+        <f:textbox />
+    </f:entry>
+    <f:entry title="${%Venafi Code Signing install directory}" field="venafiCodeSigningInstallDir">
+        <f:textbox />
+    </f:entry>
+</j:jelly>
