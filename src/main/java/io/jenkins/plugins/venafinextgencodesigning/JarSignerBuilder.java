@@ -96,7 +96,7 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
     public void perform(Run<?, ?> run, FilePath workspace, Launcher launcher, TaskListener listener)
         throws InterruptedException, IOException
     {
-        Logger logger = new Logger(listener.getLogger(), Messages.JarSignerStep_functionName());
+        Logger logger = new Logger(listener.getLogger(), Messages.JarSignerBuilder_functionName());
         Computer wsComputer = workspace.toComputer();
         if (wsComputer == null) {
             throw new AbortException("Unable to retrieve computer for workspace");
@@ -188,7 +188,7 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
         String password = Secret.toString(credentials.getPassword());
         invokeCommand(logger, launcher, ws,
             "Logging into TPP: configuring client: requesting grant from server.",
-            "Successfully gotten grant TPP.",
+            "Successfully gotten grant from TPP.",
             "Error requesting grant from TPP",
             "pkcs11config getgrant",
             new String[]{
@@ -416,7 +416,7 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
 
         @Override
         public String getDisplayName() {
-            return Messages.JarSignerStep_displayName();
+            return Messages.JarSignerBuilder_displayName();
         }
 
         public ListBoxModel doFillTppNameItems() {
