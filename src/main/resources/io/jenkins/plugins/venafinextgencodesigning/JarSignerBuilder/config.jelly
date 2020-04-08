@@ -6,6 +6,9 @@
     <f:entry title="${%Jar file path}" field="jarFile">
         <f:textbox />
     </f:entry>
+    <f:entry title="${%Jar file glob}" field="jarGlob">
+        <f:textbox />
+    </f:entry>
     <f:entry title="${%Certificate label}" field="certLabel">
         <f:textbox />
     </f:entry>

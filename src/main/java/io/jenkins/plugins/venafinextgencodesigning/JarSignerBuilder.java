@@ -19,6 +19,8 @@ import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
 
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
@@ -41,6 +43,9 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
 
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
     private String jarFile;
+
+    @SuppressFBWarnings("UUF_UNUSED_FIELD")
+    private String jarGlob;
 
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
     private String certLabel;
@@ -67,7 +72,24 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
 
     @DataBoundSetter
     public void setJarFile(String value) {
-        this.jarFile = value;
+        if (value.equals("")) {
+            this.jarFile = null;
+        } else {
+            this.jarFile = value;
+        }
+    }
+
+    public String getJarGlob() {
+        return jarGlob;
+    }
+
+    @DataBoundSetter
+    public void setJarGlob(String value) {
+        if (value.equals("")) {
+            this.jarGlob = null;
+        } else {
+            this.jarGlob = value;
+        }
     }
 
     public String getCertLabel() {
@@ -126,12 +148,15 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
         AgentInfo agentInfo = nodeRoot.act(new AgentInfo.GetAgentInfo());
         logger.log("Detected OS: %s", agentInfo.osType);
 
+        checkFileOrGlobSpecified();
+
         FilePath pkcs11ProviderConfigFile = null;
         FilePath certChainFile = null;
 
         String lockKey = calculateLockKey(wsComputer, launcher, agentInfo);
         LOCK_MANAGER.lock(logger, run, lockKey);
         try {
+            Collection<FilePath> filesToSign = getFilesToSign(workspace);
             pkcs11ProviderConfigFile = workspace.createTempFile("pkcs11-provider", ".conf");
             certChainFile = workspace.createTempFile("venafi-certchain", ".crt");
 
@@ -139,12 +164,22 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
             loginTpp(logger, launcher, workspace, nodeRoot, run, agentInfo, tppConfig,
                 credentials, certChainFile);
             invokeJarSigner(logger, launcher, workspace, agentInfo,
-                pkcs11ProviderConfigFile, certChainFile);
+                pkcs11ProviderConfigFile, certChainFile, filesToSign);
         } finally {
             logoutTpp(logger, launcher, workspace, agentInfo);
             LOCK_MANAGER.unlock(logger, lockKey);
             deleteFileOrPrintStackTrace(logger, pkcs11ProviderConfigFile);
             deleteFileOrPrintStackTrace(logger, certChainFile);
+        }
+    }
+
+    private void checkFileOrGlobSpecified() throws AbortException {
+        if (getJarFile() == null && getJarGlob() == null) {
+            throw new AbortException("Either the 'jarFile' or the 'jarGlob' parameter must be specified.");
+        }
+        if (getJarFile() != null && getJarGlob() != null) {
+            throw new AbortException("Either the 'jarFile' or the 'jarGlob' parameter must be specified,"
+                + " but not both at the same time.");
         }
     }
 
@@ -274,29 +309,46 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
         }
     }
 
+    private Collection<FilePath> getFilesToSign(FilePath ws)
+        throws IOException, InterruptedException
+    {
+        Collection<FilePath> result = new ArrayList<FilePath>();
+        if (getJarFile() != null) {
+            result.add(ws.child(getJarFile()));
+        } else {
+            for (FilePath path: ws.list(getJarGlob(), null, false)) {
+                result.add(path);
+            }
+        }
+        return result;
+    }
+
     private void invokeJarSigner(Logger logger, Launcher launcher, FilePath ws,
-        AgentInfo agentInfo, FilePath pkcs11ProviderConfigFile, FilePath certChainFile)
+        AgentInfo agentInfo, FilePath pkcs11ProviderConfigFile, FilePath certChainFile,
+        Collection<FilePath> filesToSign)
         throws InterruptedException, IOException
     {
-        invokeCommand(logger, launcher, ws,
-            "Signing with jarsigner: " + getJarFile() + "",
-            "Successfully signed '" + getJarFile() + "'.",
-            "Error signing '" + getJarFile() + "'",
-            "jarsigner",
-            new String[]{
+        for (FilePath fileToSign: filesToSign) {
+            invokeCommand(logger, launcher, ws,
+                "Signing with jarsigner: " + fileToSign.getRemote() + "",
+                "Successfully signed '" + fileToSign.getRemote() + "'.",
+                "Error signing '" + fileToSign.getRemote() + "'",
                 "jarsigner",
-                "-verbose",
-                "-keystore", "NONE",
-                "-storetype", "PKCS11",
-                "-storepass", "bogus",
-                "-providerclass", "sun.security.pkcs11.SunPKCS11",
-                "-providerArg", pkcs11ProviderConfigFile.getRemote(),
-                "-certs",
-                "-certchain", certChainFile.getRemote(),
-                getJarFile(),
-                getCertLabel()
-            },
-            null);
+                new String[]{
+                    "jarsigner",
+                    "-verbose",
+                    "-keystore", "NONE",
+                    "-storetype", "PKCS11",
+                    "-storepass", "bogus",
+                    "-providerclass", "sun.security.pkcs11.SunPKCS11",
+                    "-providerArg", pkcs11ProviderConfigFile.getRemote(),
+                    "-certs",
+                    "-certchain", certChainFile.getRemote(),
+                    fileToSign.getRemote(),
+                    getCertLabel()
+                },
+                null);
+        }
     }
 
     // Deletes the given FilePath. If the thread is interrupted, then it will
@@ -425,10 +477,6 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
                 items.add(config.getName(), config.getName());
             }
             return items;
-        }
-
-        public FormValidation doCheckJarFile(@QueryParameter String value) {
-            return FormValidation.validateRequired(value);
         }
 
         public FormValidation doCheckCertLabel(@QueryParameter String value) {
