@@ -83,7 +83,7 @@ public class PluginConfig extends GlobalConfiguration {
                 e, CONFIGURATION_ID);
         }
 
-        String duplicateName = findDuplicateServerConfigName(tppConfigs);
+        String duplicateName = findDuplicateTppConfigName(tppConfigs);
         if (duplicateName != null) {
             throw new FormException(
                 String.format(Messages.PluginConfig_duplicateTppConfigName(), duplicateName),
@@ -99,7 +99,7 @@ public class PluginConfig extends GlobalConfiguration {
         return Messages.PluginConfig_displayName();
     }
 
-    private String findDuplicateServerConfigName(List<TppConfig> tppConfigs) {
+    private String findDuplicateTppConfigName(List<TppConfig> tppConfigs) {
         Set<String> namesSeen = new HashSet<>();
         for (TppConfig config: tppConfigs) {
             if (!namesSeen.add(config.getName())) {
