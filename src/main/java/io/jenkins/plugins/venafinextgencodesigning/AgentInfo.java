@@ -15,6 +15,7 @@ public final class AgentInfo implements Serializable {
 
     public String username;
     public OsType osType;
+    public boolean isWindows64Bit;
 
     public static final class GetAgentInfo implements FileCallable<AgentInfo> {
         private static final long serialVersionUID = 1;
@@ -29,6 +30,7 @@ public final class AgentInfo implements Serializable {
                 info.osType = OsType.MACOS;
             } else if (Platform.current() == Platform.WINDOWS) {
                 info.osType = OsType.WINDOWS;
+                info.isWindows64Bit = (System.getenv("ProgramFiles(x86)") != null);
             } else {
                 info.osType = OsType.GENERIC_UNIX;
             }

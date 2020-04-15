@@ -442,7 +442,8 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
     private FilePath getPkcs11ConfigToolPath(AgentInfo agentInfo, FilePath nodeRoot) {
         FilePath toolsDir = detectVenafiCodeSigningInstallDir(agentInfo, nodeRoot);
         if (agentInfo.osType == OsType.WINDOWS) {
-            return toolsDir.child("PKCS11").child("PKCS11Config.exe");
+            String exe = agentInfo.isWindows64Bit ? "PKCS11Config.exe" : "PKCS11Config-x86.exe";
+            return toolsDir.child("PKCS11").child(exe);
         } else {
             return toolsDir.child("bin").child("pkcs11config");
         }
