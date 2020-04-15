@@ -197,7 +197,7 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
             "name = VenafiPKCS11%n"
             + "library = \"%s\"%n"
             + "slot = 0%n",
-            StringEscapeUtils.unescapeJava(libpath)
+            StringEscapeUtils.escapeJava(libpath)
         );
         file.write(contents, "UTF-8");
     }
