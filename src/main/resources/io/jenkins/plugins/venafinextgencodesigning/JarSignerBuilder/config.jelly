@@ -3,10 +3,10 @@
     <f:entry title="${%Select Venafi TPP}" field="tppName">
         <f:select />
     </f:entry>
-    <f:entry title="${%Jar file path}" field="jarFile">
+    <f:entry title="${%File path}" field="file">
         <f:textbox />
     </f:entry>
-    <f:entry title="${%Jar file glob}" field="jarGlob">
+    <f:entry title="${%File glob}" field="glob">
         <f:textbox />
     </f:entry>
     <f:entry title="${%Certificate label}" field="certLabel">

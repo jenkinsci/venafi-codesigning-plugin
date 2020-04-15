@@ -42,10 +42,10 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
     private String tppName;
 
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
-    private String jarFile;
+    private String file;
 
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
-    private String jarGlob;
+    private String glob;
 
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
     private String certLabel;
@@ -66,29 +66,29 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
         this.tppName = value;
     }
 
-    public String getJarFile() {
-        return jarFile;
+    public String getFile() {
+        return file;
     }
 
     @DataBoundSetter
-    public void setJarFile(String value) {
+    public void setFile(String value) {
         if (value.equals("")) {
-            this.jarFile = null;
+            this.file = null;
         } else {
-            this.jarFile = value;
+            this.file = value;
         }
     }
 
-    public String getJarGlob() {
-        return jarGlob;
+    public String getGlob() {
+        return glob;
     }
 
     @DataBoundSetter
-    public void setJarGlob(String value) {
+    public void setGlob(String value) {
         if (value.equals("")) {
-            this.jarGlob = null;
+            this.glob = null;
         } else {
-            this.jarGlob = value;
+            this.glob = value;
         }
     }
 
@@ -174,11 +174,11 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
     }
 
     private void checkFileOrGlobSpecified() throws AbortException {
-        if (getJarFile() == null && getJarGlob() == null) {
-            throw new AbortException("Either the 'jarFile' or the 'jarGlob' parameter must be specified.");
+        if (getFile() == null && getGlob() == null) {
+            throw new AbortException("Either the 'file' or the 'glob' parameter must be specified.");
         }
-        if (getJarFile() != null && getJarGlob() != null) {
-            throw new AbortException("Either the 'jarFile' or the 'jarGlob' parameter must be specified,"
+        if (getFile() != null && getGlob() != null) {
+            throw new AbortException("Either the 'file' or the 'glob' parameter must be specified,"
                 + " but not both at the same time.");
         }
     }
@@ -313,10 +313,10 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
         throws IOException, InterruptedException
     {
         Collection<FilePath> result = new ArrayList<FilePath>();
-        if (getJarFile() != null) {
-            result.add(ws.child(getJarFile()));
+        if (getFile() != null) {
+            result.add(ws.child(getFile()));
         } else {
-            for (FilePath path: ws.list(getJarGlob(), null, false)) {
+            for (FilePath path: ws.list(getGlob(), null, false)) {
                 result.add(path);
             }
         }
