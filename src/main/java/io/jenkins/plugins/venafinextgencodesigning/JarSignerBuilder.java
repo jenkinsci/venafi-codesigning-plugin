@@ -166,7 +166,7 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
             invokeJarSigner(logger, launcher, workspace, agentInfo,
                 pkcs11ProviderConfigFile, certChainFile, filesToSign);
         } finally {
-            logoutTpp(logger, launcher, workspace, agentInfo);
+            logoutTpp(logger, launcher, workspace, nodeRoot, agentInfo);
             LOCK_MANAGER.unlock(logger, lockKey);
             deleteFileOrPrintStackTrace(logger, pkcs11ProviderConfigFile);
             deleteFileOrPrintStackTrace(logger, certChainFile);
@@ -266,25 +266,56 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
             null);
     }
 
-    private void logoutTpp(Logger logger, Launcher launcher, FilePath ws, AgentInfo agentInfo) {
-        if (!agentInfo.osType.isUnixCompatible()) {
-            logger.log("Logging out of TPP: deleting Venafi libhsm registry entry.");
-            try {
-                Utils.deleteWindowsRegistry(logger, launcher, "HKCU\\Software\\Venafi\\libhsm");
-            } catch (Exception e) {
-                e.printStackTrace(logger.getOutput());
-            }
-            return;
-        }
-
-        FilePath home;
+    private void logoutTpp(Logger logger, Launcher launcher, FilePath ws, FilePath nodeRoot,
+        AgentInfo agentInfo)
+    {
         try {
-            home = FilePath.getHomeDirectory(ws.getChannel());
-        } catch (Exception e) {
-            e.printStackTrace(logger.getOutput());
+            invokePkcs11ConfigRevokeGrant(logger, launcher, ws, nodeRoot, agentInfo);
             return;
+        } catch (InterruptedException e) {
+            logger.log("Error logging out of TPP: operation interrupted.");
+            return;
+        } catch (Exception e) {
+            // invokePkcs11ConfigRevokeGrant() already logged a message.
+            e.printStackTrace(logger.getOutput());
         }
 
+        // Invoking 'pkcs11config revokegrant' failed, so use fallback
+        // methods to cleanup locally-stored credentials.
+        try {
+            if (agentInfo.osType.isUnixCompatible()) {
+                deleteLibhsmFiles(logger, ws);
+            } else {
+                deleteLibhsmWindowsRegistry(logger, launcher);
+            }
+        } catch (Exception e) {
+            logger.log("Error logging out of TPP: %s", e.getMessage());
+            e.printStackTrace(logger.getOutput());
+        }
+    }
+
+    private void invokePkcs11ConfigRevokeGrant(Logger logger, Launcher launcher, FilePath ws,
+        FilePath nodeRoot, AgentInfo agentInfo)
+        throws IOException, InterruptedException
+    {
+        FilePath pkcs11ConfigToolPath = getPkcs11ConfigToolPath(agentInfo, nodeRoot);
+        invokeCommand(logger, launcher, ws,
+            "Logging out of TPP: revoking server grant.",
+            "Successfully revoked server grant.",
+            "Error revoking grant from TPP",
+            "pkcs11config revokegrant",
+            new String[]{
+                pkcs11ConfigToolPath.getRemote(),
+                "revokegrant",
+                "-force",
+            },
+            null);
+    }
+
+    private void deleteLibhsmFiles(Logger logger, FilePath ws)
+        throws IOException, InterruptedException
+    {
+        FilePath home = FilePath.getHomeDirectory(ws.getChannel());
         FilePath libhsmtrust = home.child(".libhsmtrust");
         FilePath libhsmconfig = home.child(".libhsmconfig");
 
@@ -321,6 +352,13 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
             }
         }
         return result;
+    }
+
+    private void deleteLibhsmWindowsRegistry(Logger logger, Launcher launcher)
+        throws IOException, InterruptedException
+    {
+        logger.log("Logging out of TPP: deleting Venafi libhsm registry entry.");
+        Utils.deleteWindowsRegistry(logger, launcher, "HKCU\\Software\\Venafi\\libhsm");
     }
 
     private void invokeJarSigner(Logger logger, Launcher launcher, FilePath ws,
