@@ -10,8 +10,10 @@ import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang.StringUtils;
 
+import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Proc;
 import hudson.model.Computer;
@@ -79,6 +81,16 @@ public class Utils {
         }
     }
 
+    public static void deleteFileOrPrintStackTrace(Logger logger, FilePath file) {
+        try {
+            if (file != null) {
+                file.delete();
+            }
+        } catch (Exception e) {
+            e.printStackTrace(logger.getOutput());
+        }
+    }
+
     public static void deleteWindowsRegistry(Logger logger, Launcher launcher, String path)
         throws IOException, InterruptedException
     {
@@ -107,5 +119,50 @@ public class Utils {
                     + " and the following output: " + outputStr);
             }
         }
+    }
+
+    public static FilePath detectVenafiCodeSigningInstallDir(AgentInfo agentInfo, FilePath nodeRoot,
+        String userProvidedVenafiCodeSigningInstallDir)
+    {
+        if (userProvidedVenafiCodeSigningInstallDir != null) {
+            return nodeRoot.child(userProvidedVenafiCodeSigningInstallDir);
+        } else if (agentInfo.osType == OsType.MACOS) {
+            return nodeRoot.child("/Library/Venafi/CodeSigning");
+        } else if (agentInfo.osType == OsType.WINDOWS) {
+            String programFiles = System.getenv("ProgramFiles");
+            if (programFiles == null) {
+                programFiles = "C:\\Program Files";
+            }
+            return nodeRoot.child(programFiles).child("Venafi");
+        } else {
+            return nodeRoot.child("/opt/venafi/codesign");
+        }
+    }
+
+    public static FilePath getPkcs11DriverLibraryPath(AgentInfo agentInfo, FilePath nodeRoot,
+        String userProvidedVenafiCodeSigningInstallDir)
+    {
+        FilePath toolsDir = detectVenafiCodeSigningInstallDir(agentInfo, nodeRoot,
+            userProvidedVenafiCodeSigningInstallDir);
+        if (agentInfo.osType == OsType.WINDOWS) {
+            return toolsDir.child("PKCS11").child("VenafiPkcs11.dll");
+        } else {
+            return toolsDir.child("lib").child("venafipkcs11.so");
+        }
+    }
+
+    public static void createPkcs11ProviderConfig(AgentInfo agentInfo, FilePath nodeRoot, FilePath file,
+        String userProvidedVenafiCodeSigningInstallDir)
+        throws IOException, InterruptedException
+    {
+        String libpath = getPkcs11DriverLibraryPath(agentInfo, nodeRoot,
+            userProvidedVenafiCodeSigningInstallDir).getRemote();
+        String contents = String.format(
+            "name = VenafiPKCS11%n"
+            + "library = \"%s\"%n"
+            + "slot = 0%n",
+            StringEscapeUtils.escapeJava(libpath)
+        );
+        file.write(contents, "UTF-8");
     }
 }

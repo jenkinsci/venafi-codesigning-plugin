@@ -27,7 +27,6 @@ import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredenti
 
 import jenkins.tasks.SimpleBuildStep;
 
-import org.apache.commons.lang.StringEscapeUtils;
 import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
@@ -160,7 +159,8 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
             pkcs11ProviderConfigFile = workspace.createTempFile("pkcs11-provider", ".conf");
             certChainFile = workspace.createTempFile("venafi-certchain", ".crt");
 
-            createPkcs11ProviderConfig(agentInfo, nodeRoot, pkcs11ProviderConfigFile);
+            Utils.createPkcs11ProviderConfig(agentInfo, nodeRoot, pkcs11ProviderConfigFile,
+                getVenafiCodeSigningInstallDir());
             loginTpp(logger, launcher, workspace, nodeRoot, run, agentInfo, tppConfig,
                 credentials, certChainFile);
             invokeJarSigner(logger, launcher, workspace, agentInfo,
@@ -168,8 +168,8 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
         } finally {
             logoutTpp(logger, launcher, workspace, nodeRoot, agentInfo);
             LOCK_MANAGER.unlock(logger, lockKey);
-            deleteFileOrPrintStackTrace(logger, pkcs11ProviderConfigFile);
-            deleteFileOrPrintStackTrace(logger, certChainFile);
+            Utils.deleteFileOrPrintStackTrace(logger, pkcs11ProviderConfigFile);
+            Utils.deleteFileOrPrintStackTrace(logger, certChainFile);
         }
     }
 
@@ -187,19 +187,6 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
         throws IOException, InterruptedException
     {
         return Utils.getFqdn(computer, launcher, agentInfo) + ":" + agentInfo.username;
-    }
-
-    private void createPkcs11ProviderConfig(AgentInfo agentInfo, FilePath nodeRoot, FilePath file)
-        throws IOException, InterruptedException
-    {
-        String libpath = getPkcs11DriverLibraryPath(agentInfo, nodeRoot).getRemote();
-        String contents = String.format(
-            "name = VenafiPKCS11%n"
-            + "library = \"%s\"%n"
-            + "slot = 0%n",
-            StringEscapeUtils.escapeJava(libpath)
-        );
-        file.write(contents, "UTF-8");
     }
 
     private void loginTpp(Logger logger, Launcher launcher, FilePath ws,
@@ -412,16 +399,6 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
         }
     }
 
-    private void deleteFileOrPrintStackTrace(Logger logger, FilePath file) {
-        try {
-            if (file != null) {
-                file.delete();
-            }
-        } catch (Exception e) {
-            e.printStackTrace(logger.getOutput());
-        }
-    }
-
     private String invokeCommand(Logger logger, Launcher launcher, FilePath ws,
         String preMessage, String successMessage, String errorMessage,
         String shortCommandLine, String[] cmdArgs, boolean[] masks)
@@ -461,38 +438,14 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
         }
     }
 
-    private FilePath detectVenafiCodeSigningInstallDir(AgentInfo agentInfo, FilePath nodeRoot) {
-        if (getVenafiCodeSigningInstallDir() != null) {
-            return nodeRoot.child(getVenafiCodeSigningInstallDir());
-        } else if (agentInfo.osType == OsType.MACOS) {
-            return nodeRoot.child("/Library/Venafi/CodeSigning");
-        } else if (agentInfo.osType == OsType.WINDOWS) {
-            String programFiles = System.getenv("ProgramFiles");
-            if (programFiles == null) {
-                programFiles = "C:\\Program Files";
-            }
-            return nodeRoot.child(programFiles).child("Venafi");
-        } else {
-            return nodeRoot.child("/opt/venafi/codesign");
-        }
-    }
-
     private FilePath getPkcs11ConfigToolPath(AgentInfo agentInfo, FilePath nodeRoot) {
-        FilePath toolsDir = detectVenafiCodeSigningInstallDir(agentInfo, nodeRoot);
+        FilePath toolsDir = Utils.detectVenafiCodeSigningInstallDir(agentInfo, nodeRoot,
+            getVenafiCodeSigningInstallDir());
         if (agentInfo.osType == OsType.WINDOWS) {
             String exe = agentInfo.isWindows64Bit ? "PKCS11Config.exe" : "PKCS11Config-x86.exe";
             return toolsDir.child("PKCS11").child(exe);
         } else {
             return toolsDir.child("bin").child("pkcs11config");
-        }
-    }
-
-    private FilePath getPkcs11DriverLibraryPath(AgentInfo agentInfo, FilePath nodeRoot) {
-        FilePath toolsDir = detectVenafiCodeSigningInstallDir(agentInfo, nodeRoot);
-        if (agentInfo.osType == OsType.WINDOWS) {
-            return toolsDir.child("PKCS11").child("VenafiPkcs11.dll");
-        } else {
-            return toolsDir.child("lib").child("venafipkcs11.so");
         }
     }
 
