@@ -57,6 +57,9 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
     private boolean appendSignatures;
 
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
+    private String timestampingServers;
+
+    @SuppressFBWarnings("UUF_UNUSED_FIELD")
     private String signToolInstallDir;
 
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
@@ -130,6 +133,15 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
     @DataBoundSetter
     public void setAppendSignatures(boolean value) {
         this.appendSignatures = value;
+    }
+
+    public String getTimestampingServers() {
+        return timestampingServers;
+    }
+
+    @DataBoundSetter
+    public void setTimestampingServers(String value) {
+        this.timestampingServers = value;
     }
 
     public String getSignToolInstallDir() {
@@ -323,6 +335,7 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
         throws InterruptedException, IOException
     {
         FilePath signToolPath = getSignToolPath(agentInfo, nodeRoot);
+        List<String> timestampingServersList = getTimestampingServersAsList();
         List<String> signatureDigestAlgos = getSignatureDigestAlgosAsList();
 
         // With this env var, when an error occurs at the Venafi CSP driver level,
@@ -343,6 +356,16 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
                 shouldAppendSignature = i > 0;
                 cmdArgs.add("/fd");
                 cmdArgs.add(signatureDigestAlgo);
+            }
+            if (!timestampingServersList.isEmpty()) {
+                String timestampingServer = timestampingServersList.get(
+                    (int) (Math.random() * timestampingServersList.size()));
+                cmdArgs.add("/tr");
+                cmdArgs.add(timestampingServer);
+                if (signatureDigestAlgo != null) {
+                    cmdArgs.add("/td");
+                    cmdArgs.add(signatureDigestAlgo);
+                }
             }
             if (shouldAppendSignature) {
                 cmdArgs.add("/as");
@@ -427,6 +450,16 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
                 errorMessage, code, shortCommandLine, outputString);
             throw new AbortException(errorMessage + ": command exited with code " + code);
         }
+    }
+
+    private List<String> getTimestampingServersAsList() {
+        List<String> result = new ArrayList<String>();
+        if (getTimestampingServers() != null && !getTimestampingServers().isEmpty()) {
+            for (String server: getTimestampingServers().split("\\s+")) {
+                result.add(server);
+            }
+        }
+        return result;
     }
 
     private FilePath detectVenafiCodeSigningInstallDir(FilePath nodeRoot) {
