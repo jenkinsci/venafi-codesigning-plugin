@@ -353,7 +353,7 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
             cmdArgs.add("sign");
             cmdArgs.add("/v");
             if (signatureDigestAlgo != null) {
-                shouldAppendSignature = i > 0;
+                shouldAppendSignature = shouldAppendSignature || i > 0;
                 cmdArgs.add("/fd");
                 cmdArgs.add(signatureDigestAlgo);
             }
