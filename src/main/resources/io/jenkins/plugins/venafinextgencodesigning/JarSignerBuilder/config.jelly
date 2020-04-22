@@ -12,6 +12,9 @@
     <f:entry title="${%Certificate label}" field="certLabel">
         <f:textbox />
     </f:entry>
+    <f:entry title="${%Timestamping servers}" field="timestampingServers">
+        <f:textbox />
+    </f:entry>
     <f:entry title="${%Venafi Code Signing install directory}" field="venafiCodeSigningInstallDir">
         <f:textbox />
     </f:entry>

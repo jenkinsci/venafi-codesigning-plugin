@@ -21,6 +21,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
@@ -48,6 +49,9 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
 
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
     private String certLabel;
+
+    @SuppressFBWarnings("UUF_UNUSED_FIELD")
+    private String timestampingServers;
 
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
     private String venafiCodeSigningInstallDir;
@@ -98,6 +102,15 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
     @DataBoundSetter
     public void setCertLabel(String value) {
         this.certLabel = value;
+    }
+
+    public String getTimestampingServers() {
+        return timestampingServers;
+    }
+
+    @DataBoundSetter
+    public void setTimestampingServers(String value) {
+        this.timestampingServers = value;
     }
 
     public String getVenafiCodeSigningInstallDir() {
@@ -328,24 +341,38 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
         Collection<FilePath> filesToSign)
         throws InterruptedException, IOException
     {
+        List<String> timestampingServersList = getTimestampingServersAsList();
+
         for (FilePath fileToSign: filesToSign) {
+            ArrayList<String> cmdArgs = new ArrayList<String>();
+            cmdArgs.add("jarsigner");
+            cmdArgs.add("-verbose");
+            cmdArgs.add("-keystore");
+            cmdArgs.add("NONE");
+            cmdArgs.add("-storetype");
+            cmdArgs.add("PKCS11");
+            cmdArgs.add("-storepass");
+            cmdArgs.add("bogus");
+            cmdArgs.add("-providerclass");
+            cmdArgs.add("sun.security.pkcs11.SunPKCS11");
+            cmdArgs.add("-providerArg");
+            cmdArgs.add(pkcs11ProviderConfigFile.getRemote());
+            cmdArgs.add("-certs");
+            if (!timestampingServersList.isEmpty()) {
+                String timestampingServer = timestampingServersList.get(
+                    (int) (Math.random() * timestampingServersList.size()));
+                cmdArgs.add("-tsa");
+                cmdArgs.add(timestampingServer);
+            }
+            cmdArgs.add(fileToSign.getRemote());
+            cmdArgs.add(getCertLabel());
+
             invokeCommand(logger, launcher, ws,
                 "Signing with jarsigner: " + fileToSign.getRemote() + "",
                 "Successfully signed '" + fileToSign.getRemote() + "'.",
                 "Error signing '" + fileToSign.getRemote() + "'",
                 "jarsigner",
-                new String[]{
-                    "jarsigner",
-                    "-verbose",
-                    "-keystore", "NONE",
-                    "-storetype", "PKCS11",
-                    "-storepass", "bogus",
-                    "-providerclass", "sun.security.pkcs11.SunPKCS11",
-                    "-providerArg", pkcs11ProviderConfigFile.getRemote(),
-                    "-certs",
-                    fileToSign.getRemote(),
-                    getCertLabel()
-                },
+                cmdArgs.toArray(new String[0]),
                 null);
         }
     }
@@ -421,6 +448,16 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
         } else {
             return toolsDir.child("bin").child("pkcs11config");
         }
+    }
+
+    private List<String> getTimestampingServersAsList() {
+        List<String> result = new ArrayList<String>();
+        if (getTimestampingServers() != null && !getTimestampingServers().isEmpty()) {
+            for (String server: getTimestampingServers().split("\\s+")) {
+                result.add(server);
+            }
+        }
+        return result;
     }
 
     @Symbol("venafiCodeSignWithJarSigner")
