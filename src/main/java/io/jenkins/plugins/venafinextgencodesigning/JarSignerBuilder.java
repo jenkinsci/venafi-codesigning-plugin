@@ -150,26 +150,23 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
         checkFileOrGlobSpecified();
 
         FilePath pkcs11ProviderConfigFile = null;
-        FilePath certChainFile = null;
 
         String lockKey = calculateLockKey(wsComputer, launcher, agentInfo);
         LOCK_MANAGER.lock(logger, run, lockKey);
         try {
             Collection<FilePath> filesToSign = getFilesToSign(workspace);
             pkcs11ProviderConfigFile = workspace.createTempFile("pkcs11-provider", ".conf");
-            certChainFile = workspace.createTempFile("venafi-certchain", ".crt");
 
             Utils.createPkcs11ProviderConfig(agentInfo, nodeRoot, pkcs11ProviderConfigFile,
                 getVenafiCodeSigningInstallDir());
             loginTpp(logger, launcher, workspace, nodeRoot, run, agentInfo, tppConfig,
-                credentials, certChainFile);
+                credentials);
             invokeJarSigner(logger, launcher, workspace, agentInfo,
-                pkcs11ProviderConfigFile, certChainFile, filesToSign);
+                pkcs11ProviderConfigFile, filesToSign);
         } finally {
             logoutTpp(logger, launcher, workspace, nodeRoot, agentInfo);
             LOCK_MANAGER.unlock(logger, lockKey);
             Utils.deleteFileOrPrintStackTrace(logger, pkcs11ProviderConfigFile);
-            Utils.deleteFileOrPrintStackTrace(logger, certChainFile);
         }
     }
 
@@ -191,13 +188,11 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
 
     private void loginTpp(Logger logger, Launcher launcher, FilePath ws,
         FilePath nodeRoot, Run<?, ?> run, AgentInfo agentInfo, TppConfig tppConfig,
-        StandardUsernamePasswordCredentials credentials, FilePath certChainFile)
+        StandardUsernamePasswordCredentials credentials)
         throws InterruptedException, IOException, RuntimeException
     {
         invokePkcs11ConfigGetGrant(logger, launcher, ws, nodeRoot, run, tppConfig,
             agentInfo, credentials);
-        invokePkcs11ConfigGetCertificate(logger, launcher, ws, nodeRoot, agentInfo,
-            certChainFile);
     }
 
     private void invokePkcs11ConfigGetGrant(Logger logger, Launcher launcher, FilePath ws,
@@ -231,26 +226,6 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
                 false,
                 true
             });
-    }
-
-    private void invokePkcs11ConfigGetCertificate(Logger logger, Launcher launcher, FilePath ws,
-        FilePath nodeRoot, AgentInfo agentInfo, FilePath certChainFile)
-        throws InterruptedException, IOException
-    {
-        FilePath pkcs11ConfigToolPath = getPkcs11ConfigToolPath(agentInfo, nodeRoot);
-        invokeCommand(logger, launcher, ws,
-            "Logging into TPP: configuring client: fetching certificate chain for '"
-                + getCertLabel() + "'.",
-            "Successfully fetched certificate chain.",
-            "Error fetching certificate chain from TPP",
-            "pkcs11config getcertificate",
-            new String[]{
-                pkcs11ConfigToolPath.getRemote(),
-                "getcertificate",
-                "--chainfile=" + certChainFile.getRemote(),
-                "--label=" + getCertLabel(),
-            },
-            null);
     }
 
     private void logoutTpp(Logger logger, Launcher launcher, FilePath ws, FilePath nodeRoot,
@@ -349,7 +324,7 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
     }
 
     private void invokeJarSigner(Logger logger, Launcher launcher, FilePath ws,
-        AgentInfo agentInfo, FilePath pkcs11ProviderConfigFile, FilePath certChainFile,
+        AgentInfo agentInfo, FilePath pkcs11ProviderConfigFile,
         Collection<FilePath> filesToSign)
         throws InterruptedException, IOException
     {
@@ -368,7 +343,6 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
                     "-providerclass", "sun.security.pkcs11.SunPKCS11",
                     "-providerArg", pkcs11ProviderConfigFile.getRemote(),
                     "-certs",
-                    "-certchain", certChainFile.getRemote(),
                     fileToSign.getRemote(),
                     getCertLabel()
                 },
