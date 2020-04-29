@@ -54,6 +54,9 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
     private String timestampingServers;
 
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
+    private String extraArgs;
+
+    @SuppressFBWarnings("UUF_UNUSED_FIELD")
     private String venafiCodeSigningInstallDir;
 
     @DataBoundConstructor
@@ -111,6 +114,15 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
     @DataBoundSetter
     public void setTimestampingServers(String value) {
         this.timestampingServers = value;
+    }
+
+    public String getExtraArgs() {
+        return extraArgs;
+    }
+
+    @DataBoundSetter
+    public void setExtraArgs(String value) {
+        this.extraArgs = value;
     }
 
     public String getVenafiCodeSigningInstallDir() {
@@ -370,6 +382,12 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
                     (int) (Math.random() * timestampingServersList.size()));
                 cmdArgs.add("-tsa");
                 cmdArgs.add(timestampingServer);
+            }
+            if (getExtraArgs() != null) {
+                List<String> extraArgsList = Utils.parseStringAsNewlineDelimitedList(getExtraArgs());
+                for (String extraArg: extraArgsList) {
+                    cmdArgs.add(extraArg);
+                }
             }
             cmdArgs.add(fileToSign.getRemote());
             cmdArgs.add(getCertLabel());
