@@ -1,4 +1,4 @@
-package io.jenkins.plugins.venafinextgencodesigning;
+package io.jenkins.plugins.venaficodesigning;
 
 import hudson.Extension;
 import hudson.model.AbstractDescribableImpl;

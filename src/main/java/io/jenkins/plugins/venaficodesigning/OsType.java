@@ -1,4 +1,4 @@
-package io.jenkins.plugins.venafinextgencodesigning;
+package io.jenkins.plugins.venaficodesigning;
 
 public enum OsType {
     MACOS("macOS"),
