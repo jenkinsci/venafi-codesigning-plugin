@@ -30,4 +30,7 @@
     <f:entry title="${%Venafi Code Signing install directory}" field="venafiCodeSigningInstallDir">
         <f:textbox />
     </f:entry>
+    <f:entry title="${%Use machine configuration}" field="useMachineConfiguration">
+        <f:checkbox />
+    </f:entry>
 </j:jelly>

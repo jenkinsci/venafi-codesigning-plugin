@@ -68,6 +68,9 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
     private String venafiCodeSigningInstallDir;
 
+    @SuppressFBWarnings("UUF_UNUSED_FIELD")
+    private boolean useMachineConfiguration;
+
     @DataBoundConstructor
     public SignToolBuilder() {
     }
@@ -178,6 +181,15 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
         }
     }
 
+    public boolean getUseMachineConfiguration() {
+        return useMachineConfiguration;
+    }
+
+    @DataBoundSetter
+    public void setUseMachineConfiguration(boolean value) {
+        this.useMachineConfiguration = value;
+    }
+
     @Override
     public void perform(Run<?, ?> run, FilePath workspace, Launcher launcher, TaskListener listener)
         throws InterruptedException, IOException
@@ -251,30 +263,33 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
         FilePath cspConfigToolPath = getCspConfigToolPath(agentInfo, nodeRoot);
         CredentialsProvider.track(run, credentials);
         String password = Secret.toString(credentials.getPassword());
+
+        ArrayList<String> cmdArgs = new ArrayList<String>();
+        cmdArgs.add(cspConfigToolPath.getRemote());
+        cmdArgs.add("getgrant");
+        if (getUseMachineConfiguration()) {
+            cmdArgs.add("-machine");
+        }
+        cmdArgs.add("-force");
+        cmdArgs.add("-authurl:" + tppConfig.getAuthUrl());
+        cmdArgs.add("-hsmurl:" + tppConfig.getHsmUrl());
+        cmdArgs.add("-username:" + credentials.getUsername());
+        cmdArgs.add("-password:" + password);
+
+        boolean[] masks = new boolean[cmdArgs.size()];
+        for (int i = 0; i < cmdArgs.size() - 1; i++) {
+            masks[i] = false;
+        }
+        masks[cmdArgs.size() - 1] = true;
+
         invokeCommand(logger, launcher, ws,
             "Logging into TPP: configuring client: requesting grant from server.",
             "Successfully gotten grant from TPP.",
             "Error requesting grant from TPP",
             "cspconfig getgrant",
             false,
-            new String[]{
-                cspConfigToolPath.getRemote(),
-                "getgrant",
-                "-force",
-                "-authurl:" + tppConfig.getAuthUrl(),
-                "-hsmurl:" + tppConfig.getHsmUrl(),
-                "-username:" + credentials.getUsername(),
-                "-password:" + password
-            },
-            new boolean[] {
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                true
-            },
+            cmdArgs.toArray(new String[0]),
+            masks,
             null);
     }
 
@@ -283,16 +298,21 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
         throws InterruptedException, IOException, RuntimeException
     {
         FilePath cspConfigToolPath = getCspConfigToolPath(agentInfo, nodeRoot);
+
+        ArrayList<String> cmdArgs = new ArrayList<String>();
+        cmdArgs.add(cspConfigToolPath.getRemote());
+        cmdArgs.add("sync");
+        if (getUseMachineConfiguration()) {
+            cmdArgs.add("-machine");
+        }
+
         invokeCommand(logger, launcher, ws,
             "Synchronizing local certificate store with TPP.",
             "Successfully synchronized local certificate store with TPP.",
             "Error synchronizing local certificate store with TPP",
             "cspconfig sync",
             false,
-            new String[]{
-                cspConfigToolPath.getRemote(),
-                "sync"
-            },
+            cmdArgs.toArray(new String[0]),
             null,
             null);
     }
@@ -327,17 +347,22 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
         throws IOException, InterruptedException
     {
         FilePath cspConfigToolPath = getCspConfigToolPath(agentInfo, nodeRoot);
+
+        ArrayList<String> cmdArgs = new ArrayList<String>();
+        cmdArgs.add(cspConfigToolPath.getRemote());
+        cmdArgs.add("revokegrant");
+        if (getUseMachineConfiguration()) {
+            cmdArgs.add("-machine");
+        }
+        cmdArgs.add("-force");
+
         invokeCommand(logger, launcher, ws,
             "Logging out of TPP: revoking server grant.",
             "Successfully revoked server grant.",
             "Error revoking grant from TPP",
             "cspconfig revokegrant",
             false,
-            new String[]{
-                cspConfigToolPath.getRemote(),
-                "revokegrant",
-                "-force",
-            },
+            cmdArgs.toArray(new String[0]),
             null,
             null);
     }
@@ -388,6 +413,9 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
             } else {
                 cmdArgs.add("/sha1");
                 cmdArgs.add(getSha1());
+            }
+            if (getUseMachineConfiguration()) {
+                cmdArgs.add("/sm");
             }
             if (getExtraArgs() != null) {
                 List<String> extraArgsList = Utils.parseStringAsNewlineDelimitedList(getExtraArgs());
