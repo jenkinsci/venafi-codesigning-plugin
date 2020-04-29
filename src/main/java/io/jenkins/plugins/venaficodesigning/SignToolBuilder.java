@@ -60,6 +60,9 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
     private String timestampingServers;
 
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
+    private String extraArgs;
+
+    @SuppressFBWarnings("UUF_UNUSED_FIELD")
     private String signToolInstallDir;
 
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
@@ -142,6 +145,15 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
     @DataBoundSetter
     public void setTimestampingServers(String value) {
         this.timestampingServers = value;
+    }
+
+    public String getExtraArgs() {
+        return extraArgs;
+    }
+
+    @DataBoundSetter
+    public void setExtraArgs(String value) {
+        this.extraArgs = value;
     }
 
     public String getSignToolInstallDir() {
@@ -376,6 +388,12 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
             } else {
                 cmdArgs.add("/sha1");
                 cmdArgs.add(getSha1());
+            }
+            if (getExtraArgs() != null) {
+                List<String> extraArgsList = Utils.parseStringAsNewlineDelimitedList(getExtraArgs());
+                for (String extraArg: extraArgsList) {
+                    cmdArgs.add(extraArg);
+                }
             }
             cmdArgs.add(getFileOrGlob());
 
