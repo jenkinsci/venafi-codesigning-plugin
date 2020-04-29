@@ -144,14 +144,13 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
             throw new AbortException("Unable to retrieve root path of node");
         }
 
-        TppConfig tppConfig = PluginConfig.get().getTppConfigByName(getTppName());
+        TppConfig tppConfig = getTppConfigByName(getTppName());
         if (tppConfig == null) {
             throw new AbortException("No Venafi TPP configuration with name '"
                 + getTppName() + "' found");
         }
 
-        StandardUsernamePasswordCredentials credentials = Utils.findCredentials(
-            tppConfig.getCredentialsId());
+        StandardUsernamePasswordCredentials credentials = findCredentials(tppConfig);
         if (credentials == null) {
             throw new AbortException("No credentials with ID '"
                 + tppConfig.getCredentialsId() + "' found");
@@ -181,6 +180,14 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
             LOCK_MANAGER.unlock(logger, lockKey);
             Utils.deleteFileOrPrintStackTrace(logger, pkcs11ProviderConfigFile);
         }
+    }
+
+    TppConfig getTppConfigByName(String name) {
+        return PluginConfig.get().getTppConfigByName(name);
+    }
+
+    StandardUsernamePasswordCredentials findCredentials(TppConfig tppConfig) {
+        return Utils.findCredentials(tppConfig.getCredentialsId());
     }
 
     private void checkFileOrGlobSpecified() throws AbortException {
