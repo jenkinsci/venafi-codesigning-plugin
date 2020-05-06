@@ -304,6 +304,7 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
                 pkcs11ConfigToolPath.getRemote(),
                 "revokegrant",
                 "-force",
+                "-clear",
             },
             null);
     }

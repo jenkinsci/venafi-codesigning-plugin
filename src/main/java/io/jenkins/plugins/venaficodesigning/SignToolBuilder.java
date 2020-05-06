@@ -357,6 +357,7 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
             cmdArgs.add("-machine");
         }
         cmdArgs.add("-force");
+        cmdArgs.add("-clear");
 
         invokeCommand(logger, launcher, ws,
             "Logging out of TPP: revoking server grant.",
