@@ -21,13 +21,16 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 
 import jenkins.tasks.SimpleBuildStep;
 
+import org.apache.commons.lang.RandomStringUtils;
 import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
@@ -35,9 +38,6 @@ import org.kohsuke.stapler.QueryParameter;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 public class JarSignerBuilder extends Builder implements SimpleBuildStep {
-    @SuppressFBWarnings("UUF_UNUSED_FIELD")
-    private static transient LockManager LOCK_MANAGER = new LockManager();
-
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
     private String tppName;
 
@@ -168,28 +168,26 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
                 + tppConfig.getCredentialsId() + "' found");
         }
 
-        AgentInfo agentInfo = nodeRoot.act(new AgentInfo.GetAgentInfo());
-        logger.log("Detected node info: %s", agentInfo);
-
         checkFileOrGlobSpecified();
 
-        FilePath pkcs11ProviderConfigFile = null;
+        String sessionID = RandomStringUtils.random(24, true, true);
+        AgentInfo agentInfo = nodeRoot.act(new AgentInfo.GetAgentInfo());
+        logger.log("Session ID: %s", sessionID);
+        logger.log("Detected node info: %s", agentInfo);
 
-        String lockKey = calculateLockKey(wsComputer, launcher, agentInfo);
-        LOCK_MANAGER.lock(logger, run, lockKey);
+        FilePath pkcs11ProviderConfigFile = null;
         try {
             Collection<FilePath> filesToSign = getFilesToSign(workspace);
             pkcs11ProviderConfigFile = workspace.createTempFile("pkcs11-provider", ".conf");
 
             Utils.createPkcs11ProviderConfig(agentInfo, nodeRoot, pkcs11ProviderConfigFile,
                 getVenafiCodeSigningInstallDir());
-            loginTpp(logger, launcher, workspace, nodeRoot, run, agentInfo, tppConfig,
-                credentials);
-            invokeJarSigner(logger, launcher, workspace, agentInfo,
+            loginTpp(logger, launcher, workspace, nodeRoot, run, sessionID, agentInfo,
+                tppConfig, credentials);
+            invokeJarSigner(logger, launcher, workspace, sessionID, agentInfo,
                 pkcs11ProviderConfigFile, filesToSign);
         } finally {
-            logoutTpp(logger, launcher, workspace, nodeRoot, agentInfo);
-            LOCK_MANAGER.unlock(logger, lockKey);
+            logoutTpp(logger, launcher, workspace, nodeRoot, sessionID, agentInfo);
             Utils.deleteFileOrPrintStackTrace(logger, pkcs11ProviderConfigFile);
         }
     }
@@ -212,29 +210,27 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
         }
     }
 
-    private String calculateLockKey(Computer computer, Launcher launcher, AgentInfo agentInfo)
-        throws IOException, InterruptedException
-    {
-        return Utils.getFqdn(computer, launcher, agentInfo) + ":" + agentInfo.username;
-    }
-
     private void loginTpp(Logger logger, Launcher launcher, FilePath ws,
-        FilePath nodeRoot, Run<?, ?> run, AgentInfo agentInfo, TppConfig tppConfig,
-        StandardUsernamePasswordCredentials credentials)
+        FilePath nodeRoot, Run<?, ?> run, String sessionID, AgentInfo agentInfo,
+        TppConfig tppConfig, StandardUsernamePasswordCredentials credentials)
         throws InterruptedException, IOException, RuntimeException
     {
         invokePkcs11ConfigGetGrant(logger, launcher, ws, nodeRoot, run, tppConfig,
-            agentInfo, credentials);
+            sessionID, agentInfo, credentials);
     }
 
     private void invokePkcs11ConfigGetGrant(Logger logger, Launcher launcher, FilePath ws,
-        FilePath nodeRoot, Run<?, ?> run, TppConfig tppConfig, AgentInfo agentInfo,
-        StandardUsernamePasswordCredentials credentials)
+        FilePath nodeRoot, Run<?, ?> run, TppConfig tppConfig, String sessionID,
+        AgentInfo agentInfo, StandardUsernamePasswordCredentials credentials)
         throws InterruptedException, IOException
     {
         FilePath pkcs11ConfigToolPath = getPkcs11ConfigToolPath(agentInfo, nodeRoot);
         CredentialsProvider.track(run, credentials);
         String password = Secret.toString(credentials.getPassword());
+
+        Map<String, String> envs = new HashMap<String, String>();
+        envs.put("LIBHSMINSTANCE", sessionID);
+
         invokeCommand(logger, launcher, ws,
             "Logging into TPP: configuring client: requesting grant from server.",
             "Successfully obtained grant from TPP.",
@@ -259,42 +255,33 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
                 false,
                 false,
                 true
-            });
+            },
+            envs);
     }
 
     private void logoutTpp(Logger logger, Launcher launcher, FilePath ws, FilePath nodeRoot,
-        AgentInfo agentInfo)
+        String sessionID, AgentInfo agentInfo)
     {
         try {
-            invokePkcs11ConfigRevokeGrant(logger, launcher, ws, nodeRoot, agentInfo);
-            return;
+            invokePkcs11ConfigRevokeGrant(logger, launcher, ws, nodeRoot,
+                sessionID, agentInfo);
         } catch (InterruptedException e) {
             logger.log("Error logging out of TPP: operation interrupted.");
-            return;
         } catch (Exception e) {
             // invokePkcs11ConfigRevokeGrant() already logged a message.
-            e.printStackTrace(logger.getOutput());
-        }
-
-        // Invoking 'pkcs11config revokegrant' failed, so use fallback
-        // methods to cleanup locally-stored credentials.
-        try {
-            if (agentInfo.osType.isUnixCompatible()) {
-                deleteLibhsmFiles(logger, ws);
-            } else {
-                deleteLibhsmWindowsRegistry(logger, launcher, agentInfo);
-            }
-        } catch (Exception e) {
-            logger.log("Error logging out of TPP: %s", e.getMessage());
             e.printStackTrace(logger.getOutput());
         }
     }
 
     private void invokePkcs11ConfigRevokeGrant(Logger logger, Launcher launcher, FilePath ws,
-        FilePath nodeRoot, AgentInfo agentInfo)
+        FilePath nodeRoot, String sessionID, AgentInfo agentInfo)
         throws IOException, InterruptedException
     {
         FilePath pkcs11ConfigToolPath = getPkcs11ConfigToolPath(agentInfo, nodeRoot);
+
+        Map<String, String> envs = new HashMap<String, String>();
+        envs.put("LIBHSMINSTANCE", sessionID);
+
         invokeCommand(logger, launcher, ws,
             "Logging out of TPP: revoking server grant.",
             "Successfully revoked server grant.",
@@ -306,35 +293,8 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
                 "-force",
                 "-clear",
             },
-            null);
-    }
-
-    private void deleteLibhsmFiles(Logger logger, FilePath ws)
-        throws IOException, InterruptedException
-    {
-        FilePath home = FilePath.getHomeDirectory(ws.getChannel());
-        FilePath libhsmtrust = home.child(".libhsmtrust");
-        FilePath libhsmconfig = home.child(".libhsmconfig");
-
-        logger.log("Logging out of TPP: deleting %s", libhsmtrust);
-        try {
-            deleteFileInterruptionSafe(libhsmtrust);
-        } catch (InterruptedException e) {
-            logger.log("Error logging out of TPP: operation interrupted");
-            e.printStackTrace(logger.getOutput());
-            return;
-        } catch (Exception e) {
-            logger.log("Error logging out of TPP: %s", e.getMessage());
-            e.printStackTrace(logger.getOutput());
-        }
-
-        logger.log("Logging out of TPP: deleting %s", libhsmconfig);
-        try {
-            libhsmconfig.delete();
-        } catch (Exception e) {
-            logger.log("Error logging out of TPP: %s", e.getMessage());
-            e.printStackTrace(logger.getOutput());
-        }
+            null,
+            envs);
     }
 
     private Collection<FilePath> getFilesToSign(FilePath ws)
@@ -351,24 +311,15 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
         return result;
     }
 
-    private void deleteLibhsmWindowsRegistry(Logger logger, Launcher launcher,
-        AgentInfo agentInfo)
-        throws IOException, InterruptedException
-    {
-        logger.log("Logging out of TPP: deleting Venafi libhsm registry entry.");
-        Utils.deleteWindowsRegistry(logger, launcher,
-            // We need to delete from the same Windows registry hive
-            // that pkcs11config.exe and jarsigner.exe use.
-            agentInfo.isJre64Bit,
-            "HKCU\\Software\\Venafi\\libhsm");
-    }
-
     private void invokeJarSigner(Logger logger, Launcher launcher, FilePath ws,
-        AgentInfo agentInfo, FilePath pkcs11ProviderConfigFile,
+        String sessionID, AgentInfo agentInfo, FilePath pkcs11ProviderConfigFile,
         Collection<FilePath> filesToSign)
         throws InterruptedException, IOException
     {
         List<String> timestampingServersList = getTimestampingServersAsList();
+
+        Map<String, String> envs = new HashMap<String, String>();
+        envs.put("LIBHSMINSTANCE", sessionID);
 
         for (FilePath fileToSign: filesToSign) {
             ArrayList<String> cmdArgs = new ArrayList<String>();
@@ -406,36 +357,15 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
                 "Error signing '" + fileToSign.getRemote() + "'",
                 "jarsigner",
                 cmdArgs.toArray(new String[0]),
-                null);
-        }
-    }
-
-    // Deletes the given FilePath. If the thread is interrupted, then it will
-    // keep trying to delete the FilePath, and then re-throw the InterruptionException
-    // afterwards. This method is useful if we really want to make sure that
-    // the file is gone, even if we get interrupted ourselves.
-    private void deleteFileInterruptionSafe(FilePath path)
-        throws IOException, InterruptedException
-    {
-        InterruptedException interruption = null;
-
-        while (true) {
-            try {
-                path.delete();
-                break;
-            } catch (InterruptedException e) {
-                interruption = e;
-            }
-        }
-
-        if (interruption != null) {
-            throw interruption;
+                null,
+                envs);
         }
     }
 
     private String invokeCommand(Logger logger, Launcher launcher, FilePath ws,
         String preMessage, String successMessage, String errorMessage,
-        String shortCommandLine, String[] cmdArgs, boolean[] masks)
+        String shortCommandLine, String[] cmdArgs, boolean[] masks,
+        Map<String, String> envs)
         throws InterruptedException, IOException
     {
         logger.log("%s", preMessage);
@@ -449,6 +379,9 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
             pwd(ws);
         if (masks != null) {
             starter.masks(masks);
+        }
+        if (envs != null) {
+            starter.envs(envs);
         }
 
         Proc proc;
