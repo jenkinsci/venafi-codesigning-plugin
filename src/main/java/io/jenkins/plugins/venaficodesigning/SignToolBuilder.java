@@ -284,7 +284,7 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
 
         invokeCommand(logger, launcher, ws,
             "Logging into TPP: configuring client: requesting grant from server.",
-            "Successfully gotten grant from TPP.",
+            "Successfully obtained grant from TPP.",
             "Error requesting grant from TPP",
             "cspconfig getgrant",
             false,

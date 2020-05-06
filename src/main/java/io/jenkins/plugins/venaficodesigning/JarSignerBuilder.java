@@ -237,7 +237,7 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
         String password = Secret.toString(credentials.getPassword());
         invokeCommand(logger, launcher, ws,
             "Logging into TPP: configuring client: requesting grant from server.",
-            "Successfully gotten grant from TPP.",
+            "Successfully obtained grant from TPP.",
             "Error requesting grant from TPP",
             "pkcs11config getgrant",
             new String[]{
