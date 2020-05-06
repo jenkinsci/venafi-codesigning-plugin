@@ -247,9 +247,11 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
                 "--authurl=" + tppConfig.getAuthUrl(),
                 "--hsmurl=" + tppConfig.getHsmUrl(),
                 "--username=" + credentials.getUsername(),
-                "--password=" + password
+                "--password",
+                password
             },
             new boolean[] {
+                false,
                 false,
                 false,
                 false,

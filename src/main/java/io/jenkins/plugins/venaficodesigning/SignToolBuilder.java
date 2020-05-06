@@ -274,7 +274,8 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
         cmdArgs.add("-authurl:" + tppConfig.getAuthUrl());
         cmdArgs.add("-hsmurl:" + tppConfig.getHsmUrl());
         cmdArgs.add("-username:" + credentials.getUsername());
-        cmdArgs.add("-password:" + password);
+        cmdArgs.add("-password");
+        cmdArgs.add(password);
 
         boolean[] masks = new boolean[cmdArgs.size()];
         for (int i = 0; i < cmdArgs.size() - 1; i++) {
