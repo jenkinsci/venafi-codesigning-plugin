@@ -280,7 +280,7 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
             if (agentInfo.osType.isUnixCompatible()) {
                 deleteLibhsmFiles(logger, ws);
             } else {
-                deleteLibhsmWindowsRegistry(logger, launcher);
+                deleteLibhsmWindowsRegistry(logger, launcher, agentInfo);
             }
         } catch (Exception e) {
             logger.log("Error logging out of TPP: %s", e.getMessage());
@@ -348,11 +348,16 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
         return result;
     }
 
-    private void deleteLibhsmWindowsRegistry(Logger logger, Launcher launcher)
+    private void deleteLibhsmWindowsRegistry(Logger logger, Launcher launcher,
+        AgentInfo agentInfo)
         throws IOException, InterruptedException
     {
         logger.log("Logging out of TPP: deleting Venafi libhsm registry entry.");
-        Utils.deleteWindowsRegistry(logger, launcher, "HKCU\\Software\\Venafi\\libhsm");
+        Utils.deleteWindowsRegistry(logger, launcher,
+            // We need to delete from the same Windows registry hive
+            // that pkcs11config.exe and jarsigner.exe use.
+            agentInfo.isJre64Bit,
+            "HKCU\\Software\\Venafi\\libhsm");
     }
 
     private void invokeJarSigner(Logger logger, Launcher launcher, FilePath ws,
@@ -468,7 +473,11 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
         FilePath toolsDir = Utils.detectVenafiCodeSigningInstallDir(agentInfo, nodeRoot,
             getVenafiCodeSigningInstallDir());
         if (agentInfo.osType == OsType.WINDOWS) {
-            String exe = agentInfo.isWindows64Bit ? "PKCS11Config.exe" : "PKCS11Config-x86.exe";
+            // The Venafi PKCS11 driver stores credentials in the Windows registry.
+            // 32-bit and 64-bit executables have access to different Windows registry hives,
+            // so we need to make sure that the architecture of pkcs11config.exe matches that
+            // of jarsigner.exe.
+            String exe = agentInfo.isJre64Bit ? "PKCS11Config.exe" : "PKCS11Config-x86.exe";
             return toolsDir.child("PKCS11").child(exe);
         } else {
             return toolsDir.child("bin").child("pkcs11config");

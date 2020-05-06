@@ -93,20 +93,27 @@ public class Utils {
         }
     }
 
-    public static void deleteWindowsRegistry(Logger logger, Launcher launcher, String path)
+    public static void deleteWindowsRegistry(Logger logger, Launcher launcher,
+        boolean use64Bit, String path)
         throws IOException, InterruptedException
     {
+        ArrayList<String> cmdArgs = new ArrayList<String>();
+        cmdArgs.add("reg");
+        cmdArgs.add("delete");
+        cmdArgs.add(path);
+        cmdArgs.add("/va");
+        cmdArgs.add("/f");
+        if (use64Bit) {
+            cmdArgs.add("/reg:64");
+        } else {
+            cmdArgs.add("/reg:32");
+        }
+
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         Launcher.ProcStarter starter =
             launcher.
             launch().
-            cmds(
-                "reg",
-                "delete",
-                path,
-                "/va",
-                "/f"
-            ).
+            cmds(cmdArgs.toArray(new String[0])).
             stdout(output).
             quiet(true);
 

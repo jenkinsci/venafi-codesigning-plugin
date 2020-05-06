@@ -335,7 +335,8 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
         // method to cleanup locally-stored credentials.
         logger.log("Logging out of TPP: deleting Venafi libhsm registry entry.");
         try {
-            Utils.deleteWindowsRegistry(logger, launcher, "HKCU\\Software\\Venafi\\CSP");
+            Utils.deleteWindowsRegistry(logger, launcher, agentInfo.isWindows64Bit,
+                "HKCU\\Software\\Venafi\\CSP");
         } catch (Exception e) {
             logger.log("Error logging out of TPP: %s", e.getMessage());
             e.printStackTrace(logger.getOutput());
