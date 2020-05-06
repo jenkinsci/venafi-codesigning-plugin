@@ -376,7 +376,7 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
             cmdArgs.add("-storetype");
             cmdArgs.add("PKCS11");
             cmdArgs.add("-storepass");
-            cmdArgs.add("bogus");
+            cmdArgs.add("none");
             cmdArgs.add("-providerclass");
             cmdArgs.add("sun.security.pkcs11.SunPKCS11");
             cmdArgs.add("-providerArg");
