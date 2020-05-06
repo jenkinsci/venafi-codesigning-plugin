@@ -28,6 +28,8 @@ import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 
 import jenkins.tasks.SimpleBuildStep;
+
+import org.apache.commons.lang.RandomStringUtils;
 import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
@@ -35,9 +37,6 @@ import org.kohsuke.stapler.QueryParameter;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 public class SignToolBuilder extends Builder implements SimpleBuildStep {
-    @SuppressFBWarnings("UUF_UNUSED_FIELD")
-    private static transient LockManager LOCK_MANAGER = new LockManager();
-
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
     private String tppName;
 
@@ -212,19 +211,21 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
                 + tppConfig.getCredentialsId() + "' found");
         }
 
+        String sessionID = RandomStringUtils.random(24, true, true);
         AgentInfo agentInfo = nodeRoot.act(new AgentInfo.GetAgentInfo());
+        logger.log("Session ID: %s", sessionID);
         logger.log("Detected node info: %s", agentInfo);
 
-        String lockKey = calculateLockKey(wsComputer, launcher, agentInfo);
-        LOCK_MANAGER.lock(logger, run, lockKey);
         try {
-            loginTpp(logger, launcher, workspace, nodeRoot, run, agentInfo,
-                tppConfig, credentials);
-            invokeCspConfigSync(logger, launcher, workspace, agentInfo, nodeRoot);
-            invokeSignTool(logger, launcher, workspace, agentInfo, nodeRoot);
+            loginTpp(logger, launcher, workspace, nodeRoot, run, sessionID,
+                agentInfo, tppConfig, credentials);
+            invokeCspConfigSync(logger, launcher, workspace, sessionID,
+                agentInfo, nodeRoot);
+            invokeSignTool(logger, launcher, workspace, sessionID,
+                agentInfo, nodeRoot);
         } finally {
-            logoutTpp(logger, launcher, workspace, agentInfo, nodeRoot);
-            LOCK_MANAGER.unlock(logger, lockKey);
+            logoutTpp(logger, launcher, workspace, sessionID,
+                agentInfo, nodeRoot);
         }
     }
 
@@ -252,14 +253,8 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
         return result;
     }
 
-    private String calculateLockKey(Computer computer, Launcher launcher, AgentInfo agentInfo)
-        throws IOException, InterruptedException
-    {
-        return Utils.getFqdn(computer, launcher, agentInfo) + ":" + agentInfo.username;
-    }
-
     private void loginTpp(Logger logger, Launcher launcher, FilePath ws, FilePath nodeRoot,
-        Run<?, ?> run, AgentInfo agentInfo, TppConfig tppConfig,
+        Run<?, ?> run, String sessionID, AgentInfo agentInfo, TppConfig tppConfig,
         StandardUsernamePasswordCredentials credentials)
         throws InterruptedException, IOException, RuntimeException
     {
@@ -286,6 +281,9 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
         }
         masks[cmdArgs.size() - 1] = true;
 
+        Map<String, String> envs = new HashMap<String, String>();
+        envs.put("LIBHSMINSTANCE", sessionID);
+
         invokeCommand(logger, launcher, ws,
             "Logging into TPP: configuring client: requesting grant from server.",
             "Successfully obtained grant from TPP.",
@@ -294,11 +292,11 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
             false,
             cmdArgs.toArray(new String[0]),
             masks,
-            null);
+            envs);
     }
 
     private void invokeCspConfigSync(Logger logger, Launcher launcher, FilePath ws,
-        AgentInfo agentInfo, FilePath nodeRoot)
+        String sessionID, AgentInfo agentInfo, FilePath nodeRoot)
         throws InterruptedException, IOException, RuntimeException
     {
         FilePath cspConfigToolPath = getCspConfigToolPath(agentInfo, nodeRoot);
@@ -310,6 +308,9 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
             cmdArgs.add("-machine");
         }
 
+        Map<String, String> envs = new HashMap<String, String>();
+        envs.put("LIBHSMINSTANCE", sessionID);
+
         invokeCommand(logger, launcher, ws,
             "Synchronizing local certificate store with TPP.",
             "Successfully synchronized local certificate store with TPP.",
@@ -318,37 +319,25 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
             false,
             cmdArgs.toArray(new String[0]),
             null,
-            null);
+            envs);
     }
 
     private void logoutTpp(Logger logger, Launcher launcher, FilePath ws,
-        AgentInfo agentInfo, FilePath nodeRoot)
+        String sessionID, AgentInfo agentInfo, FilePath nodeRoot)
     {
         try {
-            invokeCspConfigRevokeGrant(logger, launcher, ws, agentInfo, nodeRoot);
-            return;
+            invokeCspConfigRevokeGrant(logger, launcher, ws, sessionID,
+                agentInfo, nodeRoot);
         } catch (InterruptedException e) {
             logger.log("Error logging out of TPP: operation interrupted.");
-            return;
         } catch (Exception e) {
             // invokeCspConfigRevokeGrant() already logged a message.
-            e.printStackTrace(logger.getOutput());
-        }
-
-        // Invoking 'cspconfig revokegrant' failed, so use a fallback
-        // method to cleanup locally-stored credentials.
-        logger.log("Logging out of TPP: deleting Venafi libhsm registry entry.");
-        try {
-            Utils.deleteWindowsRegistry(launcher, agentInfo.isWindows64Bit,
-                "HKCU\\Software\\Venafi\\CSP");
-        } catch (Exception e) {
-            logger.log("Error logging out of TPP: %s", e.getMessage());
             e.printStackTrace(logger.getOutput());
         }
     }
 
     private void invokeCspConfigRevokeGrant(Logger logger, Launcher launcher, FilePath ws,
-        AgentInfo agentInfo, FilePath nodeRoot)
+        String sessionID, AgentInfo agentInfo, FilePath nodeRoot)
         throws IOException, InterruptedException
     {
         FilePath cspConfigToolPath = getCspConfigToolPath(agentInfo, nodeRoot);
@@ -362,6 +351,9 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
         cmdArgs.add("-force");
         cmdArgs.add("-clear");
 
+        Map<String, String> envs = new HashMap<String, String>();
+        envs.put("LIBHSMINSTANCE", sessionID);
+
         invokeCommand(logger, launcher, ws,
             "Logging out of TPP: revoking server grant.",
             "Successfully revoked server grant.",
@@ -370,22 +362,23 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
             false,
             cmdArgs.toArray(new String[0]),
             null,
-            null);
+            envs);
     }
 
     private void invokeSignTool(Logger logger, Launcher launcher, FilePath ws,
-        AgentInfo agentInfo, FilePath nodeRoot)
+        String sessionID, AgentInfo agentInfo, FilePath nodeRoot)
         throws InterruptedException, IOException
     {
         FilePath signToolPath = getSignToolPath(agentInfo, nodeRoot);
         List<String> timestampingServersList = getTimestampingServersAsList();
         List<String> signatureDigestAlgos = getSignatureDigestAlgosAsList();
 
+        Map<String, String> envs = new HashMap<String, String>();
         // With this env var, when an error occurs at the Venafi CSP driver level,
         // that error is printed as part of the console output, instead of shown
         // in a dialog box that requires the user to click OK.
-        Map<String, String> envs = new HashMap<String, String>();
         envs.put("VENAFICSPSilent", "1");
+        envs.put("LIBHSMINSTANCE", sessionID);
 
         int i = 0;
         for (String signatureDigestAlgo: signatureDigestAlgos) {
