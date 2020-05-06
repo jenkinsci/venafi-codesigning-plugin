@@ -147,7 +147,11 @@ public class Utils {
         FilePath toolsDir = detectVenafiCodeSigningInstallDir(agentInfo, nodeRoot,
             userProvidedVenafiCodeSigningInstallDir);
         if (agentInfo.osType == OsType.WINDOWS) {
-            return toolsDir.child("PKCS11").child("VenafiPkcs11.dll");
+            // The Venafi PKCS11 driver is loaded by jarsigner.exe,
+            // so the driver's architecture must match jarsigner's architecture.
+            return toolsDir.child("PKCS11").child(agentInfo.isJre64Bit
+                ? "VenafiPKCS11.dll"
+                : "VenafiPKCS11-x86.dll");
         } else {
             return toolsDir.child("lib").child("venafipkcs11.so");
         }

@@ -15,7 +15,18 @@ public final class AgentInfo implements Serializable {
 
     public String username;
     public OsType osType;
+    public boolean isJre64Bit;
     public boolean isWindows64Bit;
+
+    @Override
+    public String toString() {
+        String result = String.format("OS=%s, JRE=%s",
+            osType, isJre64Bit ? "64-bit" : "32-bit");
+        if (osType == OsType.WINDOWS) {
+            result += ", Windows=" + (isWindows64Bit ? "64-bit" : "32-bit");
+        }
+        return result;
+    }
 
     public static final class GetAgentInfo implements FileCallable<AgentInfo> {
         private static final long serialVersionUID = 1;
@@ -26,6 +37,7 @@ public final class AgentInfo implements Serializable {
         {
             AgentInfo info = new AgentInfo();
             info.username = System.getProperty("user.name");
+            info.isJre64Bit = !System.getProperty("os.arch").equals("x86");
             if (Platform.isDarwin()) {
                 info.osType = OsType.MACOS;
             } else if (Platform.current() == Platform.WINDOWS) {

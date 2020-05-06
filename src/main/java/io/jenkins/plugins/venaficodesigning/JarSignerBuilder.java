@@ -169,7 +169,7 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
         }
 
         AgentInfo agentInfo = nodeRoot.act(new AgentInfo.GetAgentInfo());
-        logger.log("Detected OS: %s", agentInfo.osType);
+        logger.log("Detected node info: %s", agentInfo);
 
         checkFileOrGlobSpecified();
 
