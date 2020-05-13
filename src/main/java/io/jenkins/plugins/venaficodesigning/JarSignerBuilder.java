@@ -1,7 +1,6 @@
 package io.jenkins.plugins.venaficodesigning;
 
 import hudson.Launcher;
-import hudson.Proc;
 import hudson.AbortException;
 import hudson.Extension;
 import hudson.FilePath;
@@ -168,8 +167,6 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
                 + tppConfig.getCredentialsId() + "' found");
         }
 
-        checkFileOrGlobSpecified();
-
         String sessionID = RandomStringUtils.random(24, true, true);
         AgentInfo agentInfo = nodeRoot.act(new AgentInfo.GetAgentInfo());
         logger.log("Session ID: %s", sessionID);
@@ -198,16 +195,6 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
 
     StandardUsernamePasswordCredentials findCredentials(TppConfig tppConfig) {
         return Utils.findCredentials(tppConfig.getCredentialsId());
-    }
-
-    private void checkFileOrGlobSpecified() throws AbortException {
-        if (getFile() == null && getGlob() == null) {
-            throw new AbortException("Either the 'file' or the 'glob' parameter must be specified.");
-        }
-        if (getFile() != null && getGlob() != null) {
-            throw new AbortException("Either the 'file' or the 'glob' parameter must be specified,"
-                + " but not both at the same time.");
-        }
     }
 
     private void loginTpp(Logger logger, Launcher launcher, FilePath ws,
@@ -384,11 +371,9 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
             starter.envs(envs);
         }
 
-        Proc proc;
         int code;
         try {
-            proc = starter.start();
-            code = proc.join();
+            code = startAndJoinProc(starter);
         } catch (IOException e) {
             logger.log("%s: %s", errorMessage, e.getMessage());
             throw e;
@@ -403,6 +388,10 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
                 errorMessage, code, shortCommandLine, output.toString("UTF-8"));
             throw new AbortException(errorMessage + ": command exited with code " + code);
         }
+    }
+
+    int startAndJoinProc(Launcher.ProcStarter starter) throws IOException, InterruptedException {
+        return starter.start().join();
     }
 
     private FilePath getPkcs11ConfigToolPath(AgentInfo agentInfo, FilePath nodeRoot) {
@@ -450,6 +439,30 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
                 items.add(config.getName(), config.getName());
             }
             return items;
+        }
+
+        public FormValidation doCheckFile(@QueryParameter String value,
+            @QueryParameter String glob)
+        {
+            if (glob.isEmpty()) {
+                return FormValidation.validateRequired(value);
+            } else if (!value.isEmpty()) {
+                return FormValidation.error(Messages.JarSignerBuilder_fileAndGlobMutuallyExclusive());
+            } else {
+                return FormValidation.ok();
+            }
+        }
+
+        public FormValidation doCheckGlob(@QueryParameter String value,
+            @QueryParameter String file)
+        {
+            if (file.isEmpty()) {
+                return FormValidation.validateRequired(value);
+            } else if (!value.isEmpty()) {
+                return FormValidation.error(Messages.JarSignerBuilder_fileAndGlobMutuallyExclusive());
+            } else {
+                return FormValidation.ok();
+            }
         }
 
         public FormValidation doCheckCertLabel(@QueryParameter String value) {

@@ -11,6 +11,7 @@ import hudson.model.Node;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.tasks.Builder;
+import hudson.util.FormValidation;
 import hudson.tasks.BuildStepDescriptor;
 import org.kohsuke.stapler.DataBoundConstructor;
 
@@ -23,6 +24,7 @@ import jenkins.tasks.SimpleBuildStep;
 
 import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundSetter;
+import org.kohsuke.stapler.QueryParameter;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
@@ -100,8 +102,6 @@ public class JarSignerVerifyBuilder extends Builder implements SimpleBuildStep {
         AgentInfo agentInfo = nodeRoot.act(new AgentInfo.GetAgentInfo());
         logger.log("Detected OS: %s", agentInfo.osType);
 
-        checkFileOrGlobSpecified();
-
         FilePath pkcs11ProviderConfigFile = null;
         try {
             Collection<FilePath> filesToVerify = getFilesToVerify(workspace);
@@ -113,16 +113,6 @@ public class JarSignerVerifyBuilder extends Builder implements SimpleBuildStep {
                 pkcs11ProviderConfigFile, filesToVerify);
         } finally {
             Utils.deleteFileOrPrintStackTrace(logger, pkcs11ProviderConfigFile);
-        }
-    }
-
-    private void checkFileOrGlobSpecified() throws AbortException {
-        if (getFile() == null && getGlob() == null) {
-            throw new AbortException("Either the 'file' or the 'glob' parameter must be specified.");
-        }
-        if (getFile() != null && getGlob() != null) {
-            throw new AbortException("Either the 'file' or the 'glob' parameter must be specified,"
-                + " but not both at the same time.");
         }
     }
 
@@ -223,6 +213,30 @@ public class JarSignerVerifyBuilder extends Builder implements SimpleBuildStep {
         @Override
         public String getDisplayName() {
             return Messages.JarSignerVerifyBuilder_displayName();
+        }
+
+        public FormValidation doCheckFile(@QueryParameter String value,
+            @QueryParameter String glob)
+        {
+            if (glob.isEmpty()) {
+                return FormValidation.validateRequired(value);
+            } else if (!value.isEmpty()) {
+                return FormValidation.error(Messages.JarSignerBuilder_fileAndGlobMutuallyExclusive());
+            } else {
+                return FormValidation.ok();
+            }
+        }
+
+        public FormValidation doCheckGlob(@QueryParameter String value,
+            @QueryParameter String file)
+        {
+            if (file.isEmpty()) {
+                return FormValidation.validateRequired(value);
+            } else if (!value.isEmpty()) {
+                return FormValidation.error(Messages.JarSignerBuilder_fileAndGlobMutuallyExclusive());
+            } else {
+                return FormValidation.ok();
+            }
         }
     }
 }

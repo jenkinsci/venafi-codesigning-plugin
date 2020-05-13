@@ -224,8 +224,6 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
         AgentInfo agentInfo = nodeRoot.act(new AgentInfo.GetAgentInfo());
         logger.log("Detected node info: %s", agentInfo);
 
-        checkSubjectNameOrSha1Specified();
-
         String lockKey = calculateLockKey(wsComputer, launcher, agentInfo);
         LOCK_MANAGER.lock(logger, run, lockKey);
         try {
@@ -236,16 +234,6 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
         } finally {
             logoutTpp(logger, launcher, workspace, agentInfo, nodeRoot);
             LOCK_MANAGER.unlock(logger, lockKey);
-        }
-    }
-
-    private void checkSubjectNameOrSha1Specified() throws AbortException {
-        if (getSubjectName() == null && getSha1() == null) {
-            throw new AbortException("Either the 'subjectName' or the 'sha1' parameter must be specified.");
-        }
-        if (getSubjectName() != null && getSha1() != null) {
-            throw new AbortException("Either the 'subjectName' or the 'sha1' parameter must be specified,"
-                + " but not both at the same time.");
         }
     }
 
@@ -558,6 +546,30 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
 
         public FormValidation doCheckFileOrGlob(@QueryParameter String value) {
             return FormValidation.validateRequired(value);
+        }
+
+        public FormValidation doCheckSubjectName(@QueryParameter String value,
+            @QueryParameter String sha1)
+        {
+            if (sha1.isEmpty()) {
+                return FormValidation.validateRequired(value);
+            } else if (!value.isEmpty()) {
+                return FormValidation.error(Messages.SignToolBuilder_fileAndGlobMutuallyExclusive());
+            } else {
+                return FormValidation.ok();
+            }
+        }
+
+        public FormValidation doCheckSha1(@QueryParameter String value,
+            @QueryParameter String subjectName)
+        {
+            if (subjectName.isEmpty()) {
+                return FormValidation.validateRequired(value);
+            } else if (!value.isEmpty()) {
+                return FormValidation.error(Messages.SignToolBuilder_fileAndGlobMutuallyExclusive());
+            } else {
+                return FormValidation.ok();
+            }
         }
 
         public FormValidation doCheckSignToolInstallDir(@QueryParameter String value) {

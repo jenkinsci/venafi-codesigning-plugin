@@ -2,7 +2,6 @@ package io.jenkins.plugins.venaficodesigning;
 
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
-import hudson.model.Result;
 
 import org.junit.Before;
 import org.junit.Rule;
@@ -34,40 +33,30 @@ public class JarSignerBuilderTest {
         when(tppConfig.getCredentialsId()).thenReturn("credentials-id");
 
         credentials = mock(StandardUsernamePasswordCredentials.class);
+        doReturn("username").when(credentials).getUsername();
+        doReturn(null).when(credentials).getPassword();
     }
 
     @Test
-    public void testNoFileOrGlobGiven() throws Exception {
+    public void testSignFile() throws Exception {
         JarSignerBuilder builder = spy(new JarSignerBuilder());
         builder.setTppName(TPP_NAME);
+        builder.setFile("file.jar");
         builder.setCertLabel("label");
         doReturn(tppConfig).when(builder).getTppConfigByName(TPP_NAME);
         doReturn(credentials).when(builder).findCredentials(Mockito.any());
+        doReturn(0).when(builder).startAndJoinProc(Mockito.any());
 
         FreeStyleProject project = jenkins.createFreeStyleProject();
         project.getBuildersList().add(builder);
 
         Future<FreeStyleBuild> run = project.scheduleBuild2(0);
-        FreeStyleBuild build = jenkins.assertBuildStatus(Result.FAILURE, run);
-        jenkins.assertLogContains("Either the 'file' or the 'glob' parameter must be specified.", build);
-    }
-
-    @Test
-    public void testBothFileAndGlobGiven() throws Exception {
-        JarSignerBuilder builder = spy(new JarSignerBuilder());
-        builder.setTppName(TPP_NAME);
-        builder.setFile("file");
-        builder.setGlob("file");
-        builder.setCertLabel("label");
-        doReturn(tppConfig).when(builder).getTppConfigByName(TPP_NAME);
-        doReturn(credentials).when(builder).findCredentials(Mockito.any());
-
-        FreeStyleProject project = jenkins.createFreeStyleProject();
-        project.getBuildersList().add(builder);
-
-        Future<FreeStyleBuild> run = project.scheduleBuild2(0);
-        FreeStyleBuild build = jenkins.assertBuildStatus(Result.FAILURE, run);
-        jenkins.assertLogContains("Either the 'file' or the 'glob' parameter must be specified,"
-            + " but not both at the same time.", build);
+        FreeStyleBuild build = jenkins.assertBuildStatusSuccess(run);
+        jenkins.assertLogContains("Logging into TPP: configuring client: requesting grant from server", build);
+        jenkins.assertLogContains("Successfully obtained grant from TPP", build);
+        jenkins.assertLogContains("Signing with jarsigner", build);
+        jenkins.assertLogContains("Successfully signed", build);
+        jenkins.assertLogContains("Logging out of TPP", build);
+        jenkins.assertLogContains("Successfully revoked server grant", build);
     }
 }
