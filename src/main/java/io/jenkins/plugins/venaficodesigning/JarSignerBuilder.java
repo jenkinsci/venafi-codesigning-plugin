@@ -395,18 +395,8 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
     }
 
     private FilePath getPkcs11ConfigToolPath(AgentInfo agentInfo, FilePath nodeRoot) {
-        FilePath toolsDir = Utils.detectVenafiCodeSigningInstallDir(agentInfo, nodeRoot,
+        return Utils.getPkcs11ConfigToolPath(agentInfo, nodeRoot,
             getVenafiCodeSigningInstallDir());
-        if (agentInfo.osType == OsType.WINDOWS) {
-            // The Venafi PKCS11 driver stores credentials in the Windows registry.
-            // 32-bit and 64-bit executables have access to different Windows registry hives,
-            // so we need to make sure that the architecture of pkcs11config.exe matches that
-            // of jarsigner.exe.
-            String exe = agentInfo.isJre64Bit ? "PKCS11Config.exe" : "PKCS11Config-x86.exe";
-            return toolsDir.child("PKCS11").child(exe);
-        } else {
-            return toolsDir.child("bin").child("pkcs11config");
-        }
     }
 
     private List<String> getTimestampingServersAsList() {

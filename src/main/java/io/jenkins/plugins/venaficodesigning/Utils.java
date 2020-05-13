@@ -93,6 +93,16 @@ public class Utils {
         }
     }
 
+    public static void deleteFileRecursiveOrPrintStackTrace(Logger logger, FilePath file) {
+        try {
+            if (file != null) {
+                file.deleteRecursive();
+            }
+        } catch (Exception e) {
+            e.printStackTrace(logger.getOutput());
+        }
+    }
+
     public static void deleteWindowsRegistry(Logger logger, Launcher launcher,
         boolean use64Bit, String path)
         throws IOException, InterruptedException
@@ -161,6 +171,23 @@ public class Utils {
                 : "VenafiPKCS11-x86.dll");
         } else {
             return toolsDir.child("lib").child("venafipkcs11.so");
+        }
+    }
+
+    static public FilePath getPkcs11ConfigToolPath(AgentInfo agentInfo, FilePath nodeRoot,
+        String venafiCodeSigningInstallDir)
+    {
+        FilePath toolsDir = Utils.detectVenafiCodeSigningInstallDir(agentInfo, nodeRoot,
+            venafiCodeSigningInstallDir);
+        if (agentInfo.osType == OsType.WINDOWS) {
+            // The Venafi PKCS11 driver stores credentials in the Windows registry.
+            // 32-bit and 64-bit executables have access to different Windows registry hives,
+            // so we need to make sure that the architecture of pkcs11config.exe matches that
+            // of jarsigner.exe.
+            String exe = agentInfo.isJre64Bit ? "PKCS11Config.exe" : "PKCS11Config-x86.exe";
+            return toolsDir.child("PKCS11").child(exe);
+        } else {
+            return toolsDir.child("bin").child("pkcs11config");
         }
     }
 
