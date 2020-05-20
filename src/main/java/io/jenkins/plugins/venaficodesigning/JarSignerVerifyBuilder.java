@@ -489,7 +489,7 @@ public class JarSignerVerifyBuilder extends Builder implements SimpleBuildStep {
             if (glob.isEmpty()) {
                 return FormValidation.validateRequired(value);
             } else if (!value.isEmpty()) {
-                return FormValidation.error(Messages.JarSignerBuilder_fileAndGlobMutuallyExclusive());
+                return FormValidation.error(Messages.JarSignerVerifyBuilder_fileAndGlobMutuallyExclusive());
             } else {
                 return FormValidation.ok();
             }
@@ -501,7 +501,7 @@ public class JarSignerVerifyBuilder extends Builder implements SimpleBuildStep {
             if (file.isEmpty()) {
                 return FormValidation.validateRequired(value);
             } else if (!value.isEmpty()) {
-                return FormValidation.error(Messages.JarSignerBuilder_fileAndGlobMutuallyExclusive());
+                return FormValidation.error(Messages.JarSignerVerifyBuilder_fileAndGlobMutuallyExclusive());
             } else {
                 return FormValidation.ok();
             }
