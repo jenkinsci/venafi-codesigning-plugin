@@ -176,7 +176,7 @@ public class Utils {
     static public FilePath getPkcs11ConfigToolPath(AgentInfo agentInfo, FilePath nodeRoot,
         String venafiCodeSigningInstallDir)
     {
-        FilePath toolsDir = Utils.detectVenafiCodeSigningInstallDir(agentInfo, nodeRoot,
+        FilePath toolsDir = detectVenafiCodeSigningInstallDir(agentInfo, nodeRoot,
             venafiCodeSigningInstallDir);
         if (agentInfo.osType == OsType.WINDOWS) {
             // The Venafi PKCS11 driver stores credentials in the Windows registry.
@@ -203,6 +203,22 @@ public class Utils {
             StringEscapeUtils.escapeJava(libpath)
         );
         file.write(contents, "UTF-8");
+    }
+
+    public static FilePath getCspConfigToolPath(AgentInfo agentInfo, FilePath nodeRoot,
+        String userProvidedVenafiCodeSigningInstallDir)
+    {
+        String cspConfigExe = agentInfo.isWindows64Bit ? "CSPConfig.exe" : "CSPConfig-x86.exe";
+        FilePath toolsDir = detectVenafiCodeSigningInstallDir(agentInfo, nodeRoot,
+            userProvidedVenafiCodeSigningInstallDir);
+        return toolsDir.child("PKCS11").child(cspConfigExe);
+    }
+
+    public static FilePath getSignToolPath(AgentInfo agentInfo, FilePath nodeRoot,
+        String signToolInstallDir)
+    {
+        String arch = agentInfo.isWindows64Bit ? "x64" : "x86";
+        return nodeRoot.child(signToolInstallDir).child(arch).child("signtool.exe");
     }
 
     public static List<String> parseStringAsNewlineDelimitedList(String input) {

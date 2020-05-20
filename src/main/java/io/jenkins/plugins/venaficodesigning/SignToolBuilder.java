@@ -258,7 +258,8 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
         StandardUsernamePasswordCredentials credentials)
         throws InterruptedException, IOException, RuntimeException
     {
-        FilePath cspConfigToolPath = getCspConfigToolPath(agentInfo, nodeRoot);
+        FilePath cspConfigToolPath = Utils.getCspConfigToolPath(agentInfo, nodeRoot,
+            getVenafiCodeSigningInstallDir());
         CredentialsProvider.track(run, credentials);
         String password = Secret.toString(credentials.getPassword());
 
@@ -299,7 +300,8 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
         String sessionID, AgentInfo agentInfo, FilePath nodeRoot)
         throws InterruptedException, IOException, RuntimeException
     {
-        FilePath cspConfigToolPath = getCspConfigToolPath(agentInfo, nodeRoot);
+        FilePath cspConfigToolPath = Utils.getCspConfigToolPath(agentInfo, nodeRoot,
+            getVenafiCodeSigningInstallDir());
 
         ArrayList<String> cmdArgs = new ArrayList<String>();
         cmdArgs.add(cspConfigToolPath.getRemote());
@@ -340,7 +342,8 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
         String sessionID, AgentInfo agentInfo, FilePath nodeRoot)
         throws IOException, InterruptedException
     {
-        FilePath cspConfigToolPath = getCspConfigToolPath(agentInfo, nodeRoot);
+        FilePath cspConfigToolPath = Utils.getCspConfigToolPath(agentInfo, nodeRoot,
+            getVenafiCodeSigningInstallDir());
 
         ArrayList<String> cmdArgs = new ArrayList<String>();
         cmdArgs.add(cspConfigToolPath.getRemote());
@@ -369,7 +372,8 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
         String sessionID, AgentInfo agentInfo, FilePath nodeRoot)
         throws InterruptedException, IOException
     {
-        FilePath signToolPath = getSignToolPath(agentInfo, nodeRoot);
+        FilePath signToolPath = Utils.getSignToolPath(agentInfo, nodeRoot,
+            getSignToolInstallDir());
         List<String> timestampingServersList = getTimestampingServersAsList();
         List<String> signatureDigestAlgos = getSignatureDigestAlgosAsList();
 
@@ -505,18 +509,6 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
             }
         }
         return result;
-    }
-
-    private FilePath getCspConfigToolPath(AgentInfo agentInfo, FilePath nodeRoot) {
-        String cspConfigExe = agentInfo.isWindows64Bit ? "CSPConfig.exe" : "CSPConfig-x86.exe";
-        FilePath toolsDir = Utils.detectVenafiCodeSigningInstallDir(agentInfo, nodeRoot,
-            getVenafiCodeSigningInstallDir());
-        return toolsDir.child("PKCS11").child(cspConfigExe);
-    }
-
-    private FilePath getSignToolPath(AgentInfo agentInfo, FilePath nodeRoot) {
-        String arch = agentInfo.isWindows64Bit ? "x64" : "x86";
-        return nodeRoot.child(getSignToolInstallDir()).child(arch).child("signtool.exe");
     }
 
     @Symbol("venafiCodeSignWithSignTool")
