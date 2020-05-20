@@ -195,18 +195,9 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
         throws InterruptedException, IOException
     {
         Logger logger = new Logger(listener.getLogger(), Messages.SignToolBuilder_functionName());
-        Computer wsComputer = workspace.toComputer();
-        if (wsComputer == null) {
-            throw new AbortException("Unable to retrieve computer for workspace");
-        }
-        Node wsNode = wsComputer.getNode();
-        if (wsNode == null) {
-            throw new AbortException("Unable to retrieve node for workspace");
-        }
-        FilePath nodeRoot = wsNode.getRootPath();
-        if (nodeRoot == null) {
-            throw new AbortException("Unable to retrieve root path of node");
-        }
+        Computer wsComputer = getComputer(workspace);
+        Node wsNode = getNode(wsComputer);
+        FilePath nodeRoot = getNodeRoot(wsNode);
 
         TppConfig tppConfig = PluginConfig.get().getTppConfigByName(getTppName());
         if (tppConfig == null) {
@@ -235,6 +226,30 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
             logoutTpp(logger, launcher, workspace, agentInfo, nodeRoot);
             LOCK_MANAGER.unlock(logger, lockKey);
         }
+    }
+
+    private Computer getComputer(FilePath workspace) throws AbortException {
+        Computer result = workspace.toComputer();
+        if (result == null) {
+            throw new AbortException("Unable to retrieve computer for workspace");
+        }
+        return result;
+    }
+
+    private Node getNode(Computer computer) throws AbortException {
+        Node result = computer.getNode();
+        if (result == null) {
+            throw new AbortException("Unable to retrieve node for workspace");
+        }
+        return result;
+    }
+
+    private FilePath getNodeRoot(Node node) throws AbortException {
+        FilePath result = node.getRootPath();
+        if (result == null) {
+            throw new AbortException("Unable to retrieve root path of node");
+        }
+        return result;
     }
 
     private String calculateLockKey(Computer computer, Launcher launcher, AgentInfo agentInfo)

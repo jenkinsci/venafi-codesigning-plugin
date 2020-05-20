@@ -60,18 +60,9 @@ public class SignToolVerifyBuilder extends Builder implements SimpleBuildStep {
         throws InterruptedException, IOException
     {
         Logger logger = new Logger(listener.getLogger(), Messages.JarSignerBuilder_functionName());
-        Computer wsComputer = workspace.toComputer();
-        if (wsComputer == null) {
-            throw new AbortException("Unable to retrieve computer for workspace");
-        }
-        Node wsNode = wsComputer.getNode();
-        if (wsNode == null) {
-            throw new AbortException("Unable to retrieve node for workspace");
-        }
-        FilePath nodeRoot = wsNode.getRootPath();
-        if (nodeRoot == null) {
-            throw new AbortException("Unable to retrieve root path of node");
-        }
+        Computer wsComputer = getComputer(workspace);
+        Node wsNode = getNode(wsComputer);
+        FilePath nodeRoot = getNodeRoot(wsNode);
 
         AgentInfo agentInfo = nodeRoot.act(new AgentInfo.GetAgentInfo());
         FilePath signToolPath = getSignToolPath(agentInfo, nodeRoot);
@@ -88,6 +79,30 @@ public class SignToolVerifyBuilder extends Builder implements SimpleBuildStep {
                 getFileOrGlob(),
             },
             null);
+    }
+
+    private Computer getComputer(FilePath workspace) throws AbortException {
+        Computer result = workspace.toComputer();
+        if (result == null) {
+            throw new AbortException("Unable to retrieve computer for workspace");
+        }
+        return result;
+    }
+
+    private Node getNode(Computer computer) throws AbortException {
+        Node result = computer.getNode();
+        if (result == null) {
+            throw new AbortException("Unable to retrieve node for workspace");
+        }
+        return result;
+    }
+
+    private FilePath getNodeRoot(Node node) throws AbortException {
+        FilePath result = node.getRootPath();
+        if (result == null) {
+            throw new AbortException("Unable to retrieve root path of node");
+        }
+        return result;
     }
 
     private String invokeCommand(Logger logger, Launcher launcher, FilePath ws,
