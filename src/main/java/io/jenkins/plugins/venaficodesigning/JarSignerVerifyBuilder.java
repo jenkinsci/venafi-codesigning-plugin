@@ -223,7 +223,8 @@ public class JarSignerVerifyBuilder extends Builder implements SimpleBuildStep {
         AgentInfo agentInfo, StandardUsernamePasswordCredentials credentials)
         throws InterruptedException, IOException
     {
-        FilePath pkcs11ConfigToolPath = getPkcs11ConfigToolPath(agentInfo, nodeRoot);
+        FilePath pkcs11ConfigToolPath = Utils.getPkcs11ConfigToolPath(launcher, agentInfo,
+            nodeRoot, getVenafiCodeSigningInstallDir());
         CredentialsProvider.track(run, credentials);
         String password = Secret.toString(credentials.getPassword());
 
@@ -264,7 +265,8 @@ public class JarSignerVerifyBuilder extends Builder implements SimpleBuildStep {
         FilePath certFile, FilePath chainFile)
         throws InterruptedException, IOException
     {
-        FilePath pkcs11ConfigToolPath = getPkcs11ConfigToolPath(agentInfo, nodeRoot);
+        FilePath pkcs11ConfigToolPath = Utils.getPkcs11ConfigToolPath(launcher, agentInfo,
+            nodeRoot, getVenafiCodeSigningInstallDir());
 
         Map<String, String> envs = new HashMap<String, String>();
         envs.put("LIBHSMINSTANCE", sessionID);
@@ -380,7 +382,8 @@ public class JarSignerVerifyBuilder extends Builder implements SimpleBuildStep {
         FilePath nodeRoot, String sessionID, AgentInfo agentInfo)
         throws IOException, InterruptedException
     {
-        FilePath pkcs11ConfigToolPath = getPkcs11ConfigToolPath(agentInfo, nodeRoot);
+        FilePath pkcs11ConfigToolPath = Utils.getPkcs11ConfigToolPath(launcher, agentInfo,
+            nodeRoot, getVenafiCodeSigningInstallDir());
 
         Map<String, String> envs = new HashMap<String, String>();
         envs.put("LIBHSMINSTANCE", sessionID);
@@ -469,11 +472,6 @@ public class JarSignerVerifyBuilder extends Builder implements SimpleBuildStep {
                 errorMessage, code, shortCommandLine, outputString);
             throw new AbortException(errorMessage + ": command exited with code " + code);
         }
-    }
-
-    private FilePath getPkcs11ConfigToolPath(AgentInfo agentInfo, FilePath nodeRoot) {
-        return Utils.getPkcs11ConfigToolPath(agentInfo, nodeRoot,
-            getVenafiCodeSigningInstallDir());
     }
 
     @Symbol("venafiVerifyWithJarSigner")

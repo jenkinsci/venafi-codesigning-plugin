@@ -103,6 +103,53 @@ public class Utils {
         }
     }
 
+    public static String readWindowsRegistry(Launcher launcher,
+        boolean use64Bit, String keyName, String valueName)
+        throws IOException, InterruptedException
+    {
+        ArrayList<String> cmdArgs = new ArrayList<String>();
+        cmdArgs.add("reg");
+        cmdArgs.add("query");
+        cmdArgs.add(keyName);
+        cmdArgs.add("/v");
+        cmdArgs.add(valueName);
+        if (use64Bit) {
+            cmdArgs.add("/reg:64");
+        } else {
+            cmdArgs.add("/reg:32");
+        }
+
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        Launcher.ProcStarter starter =
+            launcher.
+            launch().
+            cmds(cmdArgs.toArray(new String[0])).
+            stdout(output).
+            quiet(true);
+
+        Proc proc = starter.start();
+        int code = proc.join();
+        String outputStr = output.toString("UTF-8").trim();
+
+        if (code != 0) {
+            throw new IOException("Error reading Windows registry key '" + keyName
+                + "\\" + valueName + "': the 'reg' command exited with code " + code
+                + " and the following output: " + outputStr);
+        }
+
+        String[] lines = outputStr.split("\r?\n");
+        for (String line: lines) {
+            int idx = line.indexOf("REG_SZ");
+            if (idx != -1) {
+                return line.substring(idx + "REG_SZ".length()).trim();
+            }
+        }
+
+        throw new IOException("Error reading Windows registry key '" + keyName
+            + "\\" + valueName + "': unable to parse 'reg' command output: "
+            + outputStr);
+    }
+
     public static void deleteWindowsRegistry(Launcher launcher, boolean use64Bit, String path)
         throws IOException, InterruptedException
     {
@@ -139,14 +186,21 @@ public class Utils {
         }
     }
 
-    public static FilePath detectVenafiCodeSigningInstallDir(AgentInfo agentInfo, FilePath nodeRoot,
-        String userProvidedVenafiCodeSigningInstallDir)
+    public static FilePath detectVenafiCodeSigningInstallDir(Launcher launcher, AgentInfo agentInfo,
+        FilePath nodeRoot, String userProvidedVenafiCodeSigningInstallDir)
+        throws InterruptedException, IOException
     {
         if (userProvidedVenafiCodeSigningInstallDir != null) {
             return nodeRoot.child(userProvidedVenafiCodeSigningInstallDir);
         } else if (agentInfo.osType == OsType.MACOS) {
             return nodeRoot.child("/Library/Venafi/CodeSigning");
         } else if (agentInfo.osType == OsType.WINDOWS) {
+            String result = readWindowsRegistry(launcher, agentInfo.isWindows64Bit,
+                "HKLM\\Software\\Venafi\\Platform", "Client Base Path");
+            if (result != null) {
+                return nodeRoot.child(result);
+            }
+
             String programFiles = System.getenv("ProgramFiles");
             if (programFiles == null) {
                 programFiles = "C:\\Program Files";
@@ -157,10 +211,11 @@ public class Utils {
         }
     }
 
-    public static FilePath getPkcs11DriverLibraryPath(AgentInfo agentInfo, FilePath nodeRoot,
-        String userProvidedVenafiCodeSigningInstallDir)
+    public static FilePath getPkcs11DriverLibraryPath(Launcher launcher, AgentInfo agentInfo,
+        FilePath nodeRoot, String userProvidedVenafiCodeSigningInstallDir)
+        throws InterruptedException, IOException
     {
-        FilePath toolsDir = detectVenafiCodeSigningInstallDir(agentInfo, nodeRoot,
+        FilePath toolsDir = detectVenafiCodeSigningInstallDir(launcher, agentInfo, nodeRoot,
             userProvidedVenafiCodeSigningInstallDir);
         if (agentInfo.osType == OsType.WINDOWS) {
             // The Venafi PKCS11 driver is loaded by jarsigner.exe,
@@ -173,10 +228,11 @@ public class Utils {
         }
     }
 
-    static public FilePath getPkcs11ConfigToolPath(AgentInfo agentInfo, FilePath nodeRoot,
-        String venafiCodeSigningInstallDir)
+    static public FilePath getPkcs11ConfigToolPath(Launcher launcher, AgentInfo agentInfo,
+        FilePath nodeRoot, String venafiCodeSigningInstallDir)
+        throws InterruptedException, IOException
     {
-        FilePath toolsDir = detectVenafiCodeSigningInstallDir(agentInfo, nodeRoot,
+        FilePath toolsDir = detectVenafiCodeSigningInstallDir(launcher, agentInfo, nodeRoot,
             venafiCodeSigningInstallDir);
         if (agentInfo.osType == OsType.WINDOWS) {
             // The Venafi PKCS11 driver stores credentials in the Windows registry.
@@ -190,11 +246,11 @@ public class Utils {
         }
     }
 
-    public static void createPkcs11ProviderConfig(AgentInfo agentInfo, FilePath nodeRoot, FilePath file,
-        String userProvidedVenafiCodeSigningInstallDir)
+    public static void createPkcs11ProviderConfig(Launcher launcher, AgentInfo agentInfo,
+        FilePath nodeRoot, FilePath file, String userProvidedVenafiCodeSigningInstallDir)
         throws IOException, InterruptedException
     {
-        String libpath = getPkcs11DriverLibraryPath(agentInfo, nodeRoot,
+        String libpath = getPkcs11DriverLibraryPath(launcher, agentInfo, nodeRoot,
             userProvidedVenafiCodeSigningInstallDir).getRemote();
         String contents = String.format(
             "name = VenafiPKCS11%n"
@@ -205,12 +261,13 @@ public class Utils {
         file.write(contents, "UTF-8");
     }
 
-    public static FilePath getCspConfigToolPath(AgentInfo agentInfo, FilePath nodeRoot,
-        String userProvidedVenafiCodeSigningInstallDir)
+    public static FilePath getCspConfigToolPath(Launcher launcher, AgentInfo agentInfo,
+        FilePath nodeRoot, String userProvidedVenafiCodeSigningInstallDir)
+        throws InterruptedException, IOException
     {
         String cspConfigExe = agentInfo.isWindows64Bit ? "CSPConfig.exe" : "CSPConfig-x86.exe";
-        FilePath toolsDir = detectVenafiCodeSigningInstallDir(agentInfo, nodeRoot,
-            userProvidedVenafiCodeSigningInstallDir);
+        FilePath toolsDir = detectVenafiCodeSigningInstallDir(launcher, agentInfo,
+            nodeRoot, userProvidedVenafiCodeSigningInstallDir);
         return toolsDir.child("PKCS11").child(cspConfigExe);
     }
 

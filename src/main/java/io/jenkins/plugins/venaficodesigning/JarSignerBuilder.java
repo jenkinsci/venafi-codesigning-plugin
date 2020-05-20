@@ -177,8 +177,8 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
             Collection<FilePath> filesToSign = getFilesToSign(workspace);
             pkcs11ProviderConfigFile = workspace.createTempFile("pkcs11-provider", ".conf");
 
-            Utils.createPkcs11ProviderConfig(agentInfo, nodeRoot, pkcs11ProviderConfigFile,
-                getVenafiCodeSigningInstallDir());
+            Utils.createPkcs11ProviderConfig(launcher, agentInfo, nodeRoot,
+                pkcs11ProviderConfigFile, getVenafiCodeSigningInstallDir());
             loginTpp(logger, launcher, workspace, nodeRoot, run, sessionID, agentInfo,
                 tppConfig, credentials);
             invokeJarSigner(logger, launcher, workspace, sessionID, agentInfo,
@@ -211,7 +211,8 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
         AgentInfo agentInfo, StandardUsernamePasswordCredentials credentials)
         throws InterruptedException, IOException
     {
-        FilePath pkcs11ConfigToolPath = getPkcs11ConfigToolPath(agentInfo, nodeRoot);
+        FilePath pkcs11ConfigToolPath = Utils.getPkcs11ConfigToolPath(launcher, agentInfo,
+            nodeRoot, getVenafiCodeSigningInstallDir());
         CredentialsProvider.track(run, credentials);
         String password = Secret.toString(credentials.getPassword());
 
@@ -264,7 +265,8 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
         FilePath nodeRoot, String sessionID, AgentInfo agentInfo)
         throws IOException, InterruptedException
     {
-        FilePath pkcs11ConfigToolPath = getPkcs11ConfigToolPath(agentInfo, nodeRoot);
+        FilePath pkcs11ConfigToolPath = Utils.getPkcs11ConfigToolPath(launcher, agentInfo,
+            nodeRoot, getVenafiCodeSigningInstallDir());
 
         Map<String, String> envs = new HashMap<String, String>();
         envs.put("LIBHSMINSTANCE", sessionID);
@@ -392,11 +394,6 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
 
     int startAndJoinProc(Launcher.ProcStarter starter) throws IOException, InterruptedException {
         return starter.start().join();
-    }
-
-    private FilePath getPkcs11ConfigToolPath(AgentInfo agentInfo, FilePath nodeRoot) {
-        return Utils.getPkcs11ConfigToolPath(agentInfo, nodeRoot,
-            getVenafiCodeSigningInstallDir());
     }
 
     private List<String> getTimestampingServersAsList() {
