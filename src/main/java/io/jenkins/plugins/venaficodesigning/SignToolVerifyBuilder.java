@@ -79,7 +79,11 @@ public class SignToolVerifyBuilder extends Builder implements SimpleBuildStep {
 
     @DataBoundSetter
     public void setSignToolInstallDir(String value) {
-        this.signToolInstallDir = value;
+        if (value.equals("")) {
+            this.signToolInstallDir = null;
+        } else {
+            this.signToolInstallDir = value;
+        }
     }
 
     public String getVenafiCodeSigningInstallDir() {
