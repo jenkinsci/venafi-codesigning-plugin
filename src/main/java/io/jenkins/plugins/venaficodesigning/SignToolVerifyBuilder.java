@@ -262,6 +262,7 @@ public class SignToolVerifyBuilder extends Builder implements SimpleBuildStep {
             new String[]{
                 signToolPath,
                 "verify",
+                "/pa",
                 getFileOrGlob(),
             },
             null,
