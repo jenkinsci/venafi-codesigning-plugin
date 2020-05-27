@@ -103,8 +103,7 @@ public class Utils {
         }
     }
 
-    public static void deleteWindowsRegistry(Logger logger, Launcher launcher,
-        boolean use64Bit, String path)
+    public static void deleteWindowsRegistry(Launcher launcher, boolean use64Bit, String path)
         throws IOException, InterruptedException
     {
         ArrayList<String> cmdArgs = new ArrayList<String>();

@@ -339,7 +339,7 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
         // method to cleanup locally-stored credentials.
         logger.log("Logging out of TPP: deleting Venafi libhsm registry entry.");
         try {
-            Utils.deleteWindowsRegistry(logger, launcher, agentInfo.isWindows64Bit,
+            Utils.deleteWindowsRegistry(launcher, agentInfo.isWindows64Bit,
                 "HKCU\\Software\\Venafi\\CSP");
         } catch (Exception e) {
             logger.log("Error logging out of TPP: %s", e.getMessage());
@@ -514,21 +514,10 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
         return result;
     }
 
-    private FilePath detectVenafiCodeSigningInstallDir(FilePath nodeRoot) {
-        if (getVenafiCodeSigningInstallDir() != null) {
-            return nodeRoot.child(getVenafiCodeSigningInstallDir());
-        } else {
-            String programFiles = System.getenv("ProgramFiles");
-            if (programFiles == null) {
-                programFiles = "C:\\Program Files";
-            }
-            return nodeRoot.child(programFiles).child("Venafi");
-        }
-    }
-
     private FilePath getCspConfigToolPath(AgentInfo agentInfo, FilePath nodeRoot) {
         String cspConfigExe = agentInfo.isWindows64Bit ? "CSPConfig.exe" : "CSPConfig-x86.exe";
-        FilePath toolsDir = detectVenafiCodeSigningInstallDir(nodeRoot);
+        FilePath toolsDir = Utils.detectVenafiCodeSigningInstallDir(agentInfo, nodeRoot,
+            getVenafiCodeSigningInstallDir());
         return toolsDir.child("PKCS11").child(cspConfigExe);
     }
 
