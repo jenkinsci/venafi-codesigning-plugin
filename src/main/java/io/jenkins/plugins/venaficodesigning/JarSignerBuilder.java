@@ -112,7 +112,11 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
 
     @DataBoundSetter
     public void setTimestampingServers(String value) {
-        this.timestampingServers = value;
+        if (value.equals("")) {
+            this.timestampingServers = null;
+        } else {
+            this.timestampingServers = value;
+        }
     }
 
     public String getExtraArgs() {
@@ -121,7 +125,11 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
 
     @DataBoundSetter
     public void setExtraArgs(String value) {
-        this.extraArgs = value;
+        if (value.equals("")) {
+            this.extraArgs = null;
+        } else {
+            this.extraArgs = value;
+        }
     }
 
     public String getVenafiCodeSigningInstallDir() {
