@@ -112,7 +112,7 @@ public class SignToolVerifyBuilder extends Builder implements SimpleBuildStep {
     public void perform(Run<?, ?> run, FilePath workspace, Launcher launcher, TaskListener listener)
         throws InterruptedException, IOException
     {
-        Logger logger = new Logger(listener.getLogger(), Messages.JarSignerBuilder_functionName());
+        Logger logger = new Logger(listener.getLogger(), Messages.JarSignerVerifyBuilder_functionName());
         Computer wsComputer = getComputer(workspace);
         Node wsNode = getNode(wsComputer);
         FilePath nodeRoot = getNodeRoot(wsNode);
