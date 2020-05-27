@@ -12,7 +12,12 @@
     <f:entry title="${%Certificate label}" field="certLabel">
         <f:textbox />
     </f:entry>
-    <f:entry title="${%Venafi Code Signing install directory}" field="venafiCodeSigningInstallDir">
-        <f:textbox />
-    </f:entry>
+
+    <f:advanced>
+        <f:section title="${%Advanced settings}">
+            <f:entry title="${%Venafi Code Signing install directory}" field="venafiCodeSigningInstallDir">
+                <f:textbox />
+            </f:entry>
+            </f:section>
+    </f:advanced>
 </j:jelly>

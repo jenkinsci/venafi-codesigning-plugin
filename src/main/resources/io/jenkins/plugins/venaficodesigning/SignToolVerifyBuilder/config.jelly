@@ -6,13 +6,18 @@
     <f:entry title="${%File path or glob}" field="fileOrGlob">
         <f:textbox />
     </f:entry>
-    <f:entry title="${%Signtool install directory}" field="signToolInstallDir">
-        <f:textbox />
-    </f:entry>
-    <f:entry title="${%Venafi Code Signing install directory}" field="venafiCodeSigningInstallDir">
-        <f:textbox />
-    </f:entry>
-    <f:entry title="${%Use machine configuration}" field="useMachineConfiguration">
-        <f:checkbox />
-    </f:entry>
+
+    <f:advanced>
+        <f:section title="${%Advanced settings}">
+            <f:entry title="${%Signtool install directory}" field="signToolInstallDir">
+                <f:textbox />
+            </f:entry>
+            <f:entry title="${%Venafi Code Signing install directory}" field="venafiCodeSigningInstallDir">
+                <f:textbox />
+            </f:entry>
+            <f:entry title="${%Use machine configuration}" field="useMachineConfiguration">
+                <f:checkbox />
+            </f:entry>
+        </f:section>
+    </f:advanced>
 </j:jelly>
