@@ -243,7 +243,7 @@ public class SignToolVerifyBuilder extends Builder implements SimpleBuildStep {
         String sessionID, AgentInfo agentInfo, FilePath nodeRoot)
         throws InterruptedException, IOException
     {
-        FilePath signToolPath = Utils.getSignToolPath(agentInfo, nodeRoot,
+        String signToolPath = Utils.getSignToolPath(agentInfo, nodeRoot,
             getSignToolInstallDir());
 
         Map<String, String> envs = new HashMap<String, String>();
@@ -260,7 +260,7 @@ public class SignToolVerifyBuilder extends Builder implements SimpleBuildStep {
             "signtool",
             true,
             new String[]{
-                signToolPath.getRemote(),
+                signToolPath,
                 "verify",
                 getFileOrGlob(),
             },
@@ -382,10 +382,6 @@ public class SignToolVerifyBuilder extends Builder implements SimpleBuildStep {
         }
 
         public FormValidation doCheckFileOrGlob(@QueryParameter String value) {
-            return FormValidation.validateRequired(value);
-        }
-
-        public FormValidation doCheckSignToolInstallDir(@QueryParameter String value) {
             return FormValidation.validateRequired(value);
         }
     }

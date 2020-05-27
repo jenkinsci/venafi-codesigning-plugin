@@ -271,11 +271,20 @@ public class Utils {
         return toolsDir.child("PKCS11").child(cspConfigExe);
     }
 
-    public static FilePath getSignToolPath(AgentInfo agentInfo, FilePath nodeRoot,
+    public static String getSignToolPath(AgentInfo agentInfo, FilePath nodeRoot,
         String signToolInstallDir)
     {
-        String arch = agentInfo.isWindows64Bit ? "x64" : "x86";
-        return nodeRoot.child(signToolInstallDir).child(arch).child("signtool.exe");
+        if (signToolInstallDir != null) {
+            String arch = agentInfo.isWindows64Bit ? "x64" : "x86";
+            return nodeRoot
+                .child(signToolInstallDir)
+                .child(arch)
+                .child("signtool.exe")
+                .getRemote();
+        } else {
+            // Assume it's in PATH
+            return "signtool";
+        }
     }
 
     public static List<String> parseStringAsNewlineDelimitedList(String input) {

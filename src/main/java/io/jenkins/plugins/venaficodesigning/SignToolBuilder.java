@@ -372,7 +372,7 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
         String sessionID, AgentInfo agentInfo, FilePath nodeRoot)
         throws InterruptedException, IOException
     {
-        FilePath signToolPath = Utils.getSignToolPath(agentInfo, nodeRoot,
+        String signToolPath = Utils.getSignToolPath(agentInfo, nodeRoot,
             getSignToolInstallDir());
         List<String> timestampingServersList = getTimestampingServersAsList();
         List<String> signatureDigestAlgos = getSignatureDigestAlgosAsList();
@@ -389,7 +389,7 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
             ArrayList<String> cmdArgs = new ArrayList<String>();
             boolean shouldAppendSignature = getAppendSignatures();
 
-            cmdArgs.add(signToolPath.getRemote());
+            cmdArgs.add(signToolPath);
             cmdArgs.add("sign");
             cmdArgs.add("/v");
             if (signatureDigestAlgo != null) {
@@ -559,10 +559,6 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
             } else {
                 return FormValidation.ok();
             }
-        }
-
-        public FormValidation doCheckSignToolInstallDir(@QueryParameter String value) {
-            return FormValidation.validateRequired(value);
         }
     }
 
