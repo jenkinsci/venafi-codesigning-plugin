@@ -1,2 +1,10 @@
-<p>Extra custom CLI arguments to pass to signtool.</p>
-<p>One argument per line.</p>
+<p>
+    This plugin invokes Signtool under the hood.
+    Here you can specify extra custom CLI arguments to pass to Signtool.
+</p>
+<p>
+    These arguments will be <em>appended</em> to the Signtool CLI invocation.
+    If they overlap with any arguments implicitly passed by this plugin,
+    then Signtool will raise an error.
+</p>
+<p>Specify one argument per line.</p>
