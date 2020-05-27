@@ -1,12 +1,10 @@
 <p>The digest algorithm(s) to use to creating signatures.</p>
-<p>If not specified, uses Signtool's default (which is 'sha1' at the time of writing).</p>
-<p>You can specify multiple ones by separating them with a space. Like this: 'sha256 sha1'</p>
-
-<h3>Recommendations</h3>
 <p>
-    You should explicitly specify 'sha256', because Signtool's default
-    — 'sha1' — is no longer considered secure.
+    If not specified, 'sha256' is used as the default algorithm. This is very secure,
+    but may not be compatible with older Windows versions. If you need compatibility
+    with older Windows versions, you should specify 'sha1 sha256'.
 </p>
-    If you need compatibility with older Windows machines that don't support
-    'sha256', then you can specify 'sha256 sha1'.
+<p>
+    You can specify multiple ones by separating them with a space. Like this: 'sha1 sha256'.
+    When multiple digest algorithms are specified, they are applied in the order specified.
 </p>

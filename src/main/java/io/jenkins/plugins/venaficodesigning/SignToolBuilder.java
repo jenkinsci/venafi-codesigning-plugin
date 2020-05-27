@@ -37,6 +37,8 @@ import org.kohsuke.stapler.QueryParameter;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 public class SignToolBuilder extends Builder implements SimpleBuildStep {
+    private static final String DEFAULT_DIGEST_ALGO = "sha256";
+
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
     private String tppName;
 
@@ -399,25 +401,23 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
         int i = 0;
         for (String signatureDigestAlgo: signatureDigestAlgos) {
             ArrayList<String> cmdArgs = new ArrayList<String>();
-            boolean shouldAppendSignature = getAppendSignatures();
+            boolean shouldAppendSignature = getAppendSignatures() || i > 0;
 
             cmdArgs.add(signToolPath);
             cmdArgs.add("sign");
             cmdArgs.add("/v");
-            if (signatureDigestAlgo != null) {
-                shouldAppendSignature = shouldAppendSignature || i > 0;
-                cmdArgs.add("/fd");
-                cmdArgs.add(signatureDigestAlgo);
-            }
+
+            cmdArgs.add("/fd");
+            cmdArgs.add(signatureDigestAlgo);
+
             if (!timestampingServersList.isEmpty()) {
                 String timestampingServer = timestampingServersList.get(
                     (int) (Math.random() * timestampingServersList.size()));
                 cmdArgs.add("/tr");
                 cmdArgs.add(timestampingServer);
-                if (signatureDigestAlgo != null) {
-                    cmdArgs.add("/td");
-                    cmdArgs.add(signatureDigestAlgo);
-                }
+
+                cmdArgs.add("/td");
+                cmdArgs.add(signatureDigestAlgo);
             }
             if (shouldAppendSignature) {
                 cmdArgs.add("/as");
@@ -461,7 +461,7 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
                 result.add(algo);
             }
         } else {
-            result.add(null);
+            result.add(DEFAULT_DIGEST_ALGO);
         }
         return result;
     }
