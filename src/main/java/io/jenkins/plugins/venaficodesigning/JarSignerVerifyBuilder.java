@@ -409,9 +409,9 @@ public class JarSignerVerifyBuilder extends Builder implements SimpleBuildStep {
         throws InterruptedException, IOException
     {
         for (FilePath fileToVerify: filesToVerify) {
-            invokeCommand(logger, launcher, ws,
+            String output = invokeCommand(logger, launcher, ws,
                 "Verifying with jarsigner: " + fileToVerify.getRemote() + "",
-                "Successfully verified '" + fileToVerify.getRemote() + "'.",
+                null,
                 "Error verifying '" + fileToVerify.getRemote() + "'",
                 "jarsigner -verify",
                 true,
@@ -424,6 +424,13 @@ public class JarSignerVerifyBuilder extends Builder implements SimpleBuildStep {
                 },
                 null,
                 null);
+
+            if (output.indexOf("jar is unsigned") == -1) {
+                logger.log("Successfully verified '" + fileToVerify.getRemote() + "'.");
+            } else {
+                throw new AbortException("Verification of '" + fileToVerify.getRemote()
+                    + "' failed: file is unsigned");
+            }
         }
     }
 
@@ -464,7 +471,9 @@ public class JarSignerVerifyBuilder extends Builder implements SimpleBuildStep {
             if (printOutputOnSuccess) {
                 logger.log("%s", outputString);
             }
-            logger.log("%s", successMessage);
+            if (successMessage != null) {
+                logger.log("%s", successMessage);
+            }
             return outputString;
         } else {
             logger.log(
