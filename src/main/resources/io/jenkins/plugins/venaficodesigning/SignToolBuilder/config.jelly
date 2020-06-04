@@ -30,7 +30,7 @@
                 <f:entry title="${%Signtool.exe path}" field="signToolPath">
                     <f:textbox />
                 </f:entry>
-                <f:entry title="${%Venafi Code Signing install directory}" field="venafiCodeSigningInstallDir">
+                <f:entry title="${%Venafi client tools directory}" field="venafiClientToolsDir">
                     <f:textbox />
                 </f:entry>
                 <f:entry title="${%Use machine configuration}" field="useMachineConfiguration">

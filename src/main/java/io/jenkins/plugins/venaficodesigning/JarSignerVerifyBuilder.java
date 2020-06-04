@@ -51,7 +51,7 @@ public class JarSignerVerifyBuilder extends Builder implements SimpleBuildStep {
     private String certLabel;
 
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
-    private String venafiCodeSigningInstallDir;
+    private String venafiClientToolsDir;
 
     @DataBoundConstructor
     public JarSignerVerifyBuilder() {
@@ -101,16 +101,16 @@ public class JarSignerVerifyBuilder extends Builder implements SimpleBuildStep {
         this.certLabel = value;
     }
 
-    public String getVenafiCodeSigningInstallDir() {
-        return venafiCodeSigningInstallDir;
+    public String getVenafiClientToolsDir() {
+        return venafiClientToolsDir;
     }
 
     @DataBoundSetter
-    public void setVenafiCodeSigningInstallDir(String value) {
+    public void setVenafiClientToolsDir(String value) {
         if (value.equals("")) {
-            this.venafiCodeSigningInstallDir = null;
+            this.venafiClientToolsDir = null;
         } else {
-            this.venafiCodeSigningInstallDir = value;
+            this.venafiClientToolsDir = value;
         }
     }
 
@@ -224,7 +224,7 @@ public class JarSignerVerifyBuilder extends Builder implements SimpleBuildStep {
         throws InterruptedException, IOException
     {
         FilePath pkcs11ConfigToolPath = Utils.getPkcs11ConfigToolPath(launcher, agentInfo,
-            nodeRoot, getVenafiCodeSigningInstallDir());
+            nodeRoot, getVenafiClientToolsDir());
         CredentialsProvider.track(run, credentials);
         String password = Secret.toString(credentials.getPassword());
 
@@ -266,7 +266,7 @@ public class JarSignerVerifyBuilder extends Builder implements SimpleBuildStep {
         throws InterruptedException, IOException
     {
         FilePath pkcs11ConfigToolPath = Utils.getPkcs11ConfigToolPath(launcher, agentInfo,
-            nodeRoot, getVenafiCodeSigningInstallDir());
+            nodeRoot, getVenafiClientToolsDir());
 
         Map<String, String> envs = new HashMap<String, String>();
         envs.put("LIBHSMINSTANCE", sessionID);
@@ -383,7 +383,7 @@ public class JarSignerVerifyBuilder extends Builder implements SimpleBuildStep {
         throws IOException, InterruptedException
     {
         FilePath pkcs11ConfigToolPath = Utils.getPkcs11ConfigToolPath(launcher, agentInfo,
-            nodeRoot, getVenafiCodeSigningInstallDir());
+            nodeRoot, getVenafiClientToolsDir());
 
         Map<String, String> envs = new HashMap<String, String>();
         envs.put("LIBHSMINSTANCE", sessionID);

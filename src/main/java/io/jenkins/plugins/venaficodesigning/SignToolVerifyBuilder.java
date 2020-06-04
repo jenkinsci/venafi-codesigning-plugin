@@ -46,7 +46,7 @@ public class SignToolVerifyBuilder extends Builder implements SimpleBuildStep {
     private String signToolPath;
 
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
-    private String venafiCodeSigningInstallDir;
+    private String venafiClientToolsDir;
 
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
     private boolean useMachineConfiguration;
@@ -86,16 +86,16 @@ public class SignToolVerifyBuilder extends Builder implements SimpleBuildStep {
         }
     }
 
-    public String getVenafiCodeSigningInstallDir() {
-        return venafiCodeSigningInstallDir;
+    public String getVenafiClientToolsDir() {
+        return venafiClientToolsDir;
     }
 
     @DataBoundSetter
-    public void setVenafiCodeSigningInstallDir(String value) {
+    public void setVenafiClientToolsDir(String value) {
         if (value.equals("")) {
-            this.venafiCodeSigningInstallDir = null;
+            this.venafiClientToolsDir = null;
         } else {
-            this.venafiCodeSigningInstallDir = value;
+            this.venafiClientToolsDir = value;
         }
     }
 
@@ -178,7 +178,7 @@ public class SignToolVerifyBuilder extends Builder implements SimpleBuildStep {
         throws InterruptedException, IOException, RuntimeException
     {
         FilePath cspConfigToolPath = Utils.getCspConfigToolPath(launcher, agentInfo,
-            nodeRoot, getVenafiCodeSigningInstallDir());
+            nodeRoot, getVenafiClientToolsDir());
         CredentialsProvider.track(run, credentials);
         String password = Secret.toString(credentials.getPassword());
 
@@ -220,7 +220,7 @@ public class SignToolVerifyBuilder extends Builder implements SimpleBuildStep {
         throws InterruptedException, IOException, RuntimeException
     {
         FilePath cspConfigToolPath = Utils.getCspConfigToolPath(launcher, agentInfo,
-            nodeRoot, getVenafiCodeSigningInstallDir());
+            nodeRoot, getVenafiClientToolsDir());
 
         ArrayList<String> cmdArgs = new ArrayList<String>();
         cmdArgs.add(cspConfigToolPath.getRemote());
@@ -291,7 +291,7 @@ public class SignToolVerifyBuilder extends Builder implements SimpleBuildStep {
         throws IOException, InterruptedException
     {
         FilePath cspConfigToolPath = Utils.getCspConfigToolPath(launcher, agentInfo,
-            nodeRoot, getVenafiCodeSigningInstallDir());
+            nodeRoot, getVenafiClientToolsDir());
 
         ArrayList<String> cmdArgs = new ArrayList<String>();
         cmdArgs.add(cspConfigToolPath.getRemote());

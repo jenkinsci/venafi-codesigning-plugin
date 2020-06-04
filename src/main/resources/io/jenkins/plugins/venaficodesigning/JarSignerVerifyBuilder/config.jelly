@@ -15,7 +15,7 @@
 
     <f:advanced>
         <f:section title="${%Advanced settings}">
-            <f:entry title="${%Venafi Code Signing install directory}" field="venafiCodeSigningInstallDir">
+            <f:entry title="${%Venafi client tools directory}" field="venafiClientToolsDir">
                 <f:textbox />
             </f:entry>
             </f:section>
