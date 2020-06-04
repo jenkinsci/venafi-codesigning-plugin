@@ -27,7 +27,7 @@
                 <f:entry title="${%Extra custom CLI arguments}" field="extraArgs">
                     <f:textarea />
                 </f:entry>
-                <f:entry title="${%Signtool install directory}" field="signToolInstallDir">
+                <f:entry title="${%Signtool.exe path}" field="signToolPath">
                     <f:textbox />
                 </f:entry>
                 <f:entry title="${%Venafi Code Signing install directory}" field="venafiCodeSigningInstallDir">

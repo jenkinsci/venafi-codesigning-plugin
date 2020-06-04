@@ -43,7 +43,7 @@ public class SignToolVerifyBuilder extends Builder implements SimpleBuildStep {
     private String fileOrGlob;
 
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
-    private String signToolInstallDir;
+    private String signToolPath;
 
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
     private String venafiCodeSigningInstallDir;
@@ -73,16 +73,16 @@ public class SignToolVerifyBuilder extends Builder implements SimpleBuildStep {
         this.fileOrGlob = value;
     }
 
-    public String getSignToolInstallDir() {
-        return signToolInstallDir;
+    public String getSignToolPath() {
+        return signToolPath;
     }
 
     @DataBoundSetter
-    public void setSignToolInstallDir(String value) {
+    public void setSignToolPath(String value) {
         if (value.equals("")) {
-            this.signToolInstallDir = null;
+            this.signToolPath = null;
         } else {
-            this.signToolInstallDir = value;
+            this.signToolPath = value;
         }
     }
 
@@ -247,8 +247,7 @@ public class SignToolVerifyBuilder extends Builder implements SimpleBuildStep {
         String sessionID, AgentInfo agentInfo, FilePath nodeRoot)
         throws InterruptedException, IOException
     {
-        String signToolPath = Utils.getSignToolPath(agentInfo, nodeRoot,
-            getSignToolInstallDir());
+        String signToolPath = Utils.getSignToolPath(getSignToolPath());
 
         Map<String, String> envs = new HashMap<String, String>();
         // With this env var, when an error occurs at the Venafi CSP driver level,

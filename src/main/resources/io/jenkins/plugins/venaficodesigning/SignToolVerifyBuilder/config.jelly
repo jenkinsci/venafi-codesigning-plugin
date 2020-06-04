@@ -9,7 +9,7 @@
 
     <f:advanced>
         <f:section title="${%Advanced settings}">
-            <f:entry title="${%Signtool install directory}" field="signToolInstallDir">
+            <f:entry title="${%Signtool.exe path}" field="signToolPath">
                 <f:textbox />
             </f:entry>
             <f:entry title="${%Venafi Code Signing install directory}" field="venafiCodeSigningInstallDir">

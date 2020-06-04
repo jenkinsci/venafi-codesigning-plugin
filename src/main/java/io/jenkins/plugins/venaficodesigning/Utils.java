@@ -271,16 +271,9 @@ public class Utils {
         return toolsDir.child("PKCS11").child(cspConfigExe);
     }
 
-    public static String getSignToolPath(AgentInfo agentInfo, FilePath nodeRoot,
-        String signToolInstallDir)
-    {
-        if (signToolInstallDir != null) {
-            String arch = agentInfo.isWindows64Bit ? "x64" : "x86";
-            return nodeRoot
-                .child(signToolInstallDir)
-                .child(arch)
-                .child("signtool.exe")
-                .getRemote();
+    public static String getSignToolPath(String userProvidedSignToolPath) {
+        if (userProvidedSignToolPath != null) {
+            return userProvidedSignToolPath;
         } else {
             // Assume it's in PATH
             return "signtool";
