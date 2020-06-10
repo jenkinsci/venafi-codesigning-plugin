@@ -17,7 +17,7 @@
         <workflow.version>2.0</workflow.version>
     </properties>
 
-    <name>Venafi Next-Gen Code Signing</name>
+    <name>Venafi CodeSign Protect</name>
     <licenses>
         <license>
             <name>Apache License, Version 2.0</name>
