@@ -52,16 +52,16 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
     private String sha1;
 
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
-    private List<SigDigestAlgo> signatureDigestAlgos;
+    private List<SigDigestAlgo> signatureDigestAlgos = new ArrayList<>();
 
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
     private boolean appendSignatures;
 
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
-    private List<TimestampingServer> timestampingServers;
+    private List<TimestampingServer> timestampingServers = new ArrayList<>();
 
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
-    private List<CmdArg> extraArgs;
+    private List<CmdArg> extraArgs = new ArrayList<>();
 
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
     private String signToolPath;

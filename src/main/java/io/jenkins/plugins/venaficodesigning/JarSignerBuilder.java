@@ -50,10 +50,10 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
     private String certLabel;
 
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
-    private List<TimestampingServer> timestampingServers;
+    private List<TimestampingServer> timestampingServers = new ArrayList<>();
 
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
-    private List<CmdArg> extraArgs;
+    private List<CmdArg> extraArgs = new ArrayList<>();
 
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
     private String venafiClientToolsDir;
