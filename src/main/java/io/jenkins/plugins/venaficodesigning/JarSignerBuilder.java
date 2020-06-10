@@ -37,8 +37,8 @@ import org.kohsuke.stapler.QueryParameter;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 public class JarSignerBuilder extends Builder implements SimpleBuildStep {
-    @SuppressFBWarnings("UUF_UNUSED_FIELD")
-    private String tppName;
+    private final String tppName;
+    private final String certLabel;
 
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
     private String file;
@@ -46,8 +46,6 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
     private String glob;
 
-    @SuppressFBWarnings("UUF_UNUSED_FIELD")
-    private String certLabel;
 
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
     private List<TimestampingServer> timestampingServers = new ArrayList<>();
@@ -59,16 +57,13 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
     private String venafiClientToolsDir;
 
     @DataBoundConstructor
-    public JarSignerBuilder() {
+    public JarSignerBuilder(String tppName, String certLabel) {
+        this.tppName = tppName;
+        this.certLabel = certLabel;
     }
 
     public String getTppName() {
         return tppName;
-    }
-
-    @DataBoundSetter
-    public void setTppName(String value) {
-        this.tppName = value;
     }
 
     public String getFile() {
@@ -99,11 +94,6 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
 
     public String getCertLabel() {
         return certLabel;
-    }
-
-    @DataBoundSetter
-    public void setCertLabel(String value) {
-        this.certLabel = value;
     }
 
     public List<TimestampingServer> getTimestampingServers() {

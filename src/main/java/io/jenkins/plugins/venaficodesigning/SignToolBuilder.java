@@ -39,11 +39,8 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 public class SignToolBuilder extends Builder implements SimpleBuildStep {
     private static final String DEFAULT_DIGEST_ALGO = "sha256";
 
-    @SuppressFBWarnings("UUF_UNUSED_FIELD")
-    private String tppName;
-
-    @SuppressFBWarnings("UUF_UNUSED_FIELD")
-    private String fileOrGlob;
+    private final String tppName;
+    private final String fileOrGlob;
 
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
     private String subjectName;
@@ -73,25 +70,17 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
     private boolean useMachineConfiguration;
 
     @DataBoundConstructor
-    public SignToolBuilder() {
+    public SignToolBuilder(String tppName, String fileOrGlob) {
+        this.tppName = tppName;
+        this.fileOrGlob = fileOrGlob;
     }
 
     public String getTppName() {
         return tppName;
     }
 
-    @DataBoundSetter
-    public void setTppName(String value) {
-        this.tppName = value;
-    }
-
     public String getFileOrGlob() {
         return fileOrGlob;
-    }
-
-    @DataBoundSetter
-    public void setFileOrGlob(String value) {
-        this.fileOrGlob = value;
     }
 
     public String getSubjectName() {
@@ -127,8 +116,7 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
     public List<SigDigestAlgo> getSignatureDigestAlgosWithDefaultFallback() {
         if (signatureDigestAlgos == null || signatureDigestAlgos.isEmpty()) {
             List<SigDigestAlgo> result = new ArrayList<>();
-            SigDigestAlgo algo = new SigDigestAlgo();
-            algo.setAlgorithm(DEFAULT_DIGEST_ALGO);
+            SigDigestAlgo algo = new SigDigestAlgo(DEFAULT_DIGEST_ALGO);
             result.add(algo);
             return result;
         } else {

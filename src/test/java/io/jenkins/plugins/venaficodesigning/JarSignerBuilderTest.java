@@ -39,10 +39,8 @@ public class JarSignerBuilderTest {
 
     @Test
     public void testSignFile() throws Exception {
-        JarSignerBuilder builder = spy(new JarSignerBuilder());
-        builder.setTppName(TPP_NAME);
+        JarSignerBuilder builder = spy(new JarSignerBuilder(TPP_NAME, "label"));
         builder.setFile("file.jar");
-        builder.setCertLabel("label");
         doReturn(tppConfig).when(builder).getTppConfigByName(TPP_NAME);
         doReturn(credentials).when(builder).findCredentials(Mockito.any());
         doReturn(0).when(builder).startAndJoinProc(Mockito.any());

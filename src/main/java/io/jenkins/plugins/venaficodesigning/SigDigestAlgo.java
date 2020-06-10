@@ -3,7 +3,6 @@ package io.jenkins.plugins.venaficodesigning;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 
 import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.DataBoundSetter;
 
 import hudson.Extension;
 import hudson.model.AbstractDescribableImpl;
@@ -14,16 +13,12 @@ public class SigDigestAlgo extends AbstractDescribableImpl<SigDigestAlgo> {
     private String algorithm;
 
     @DataBoundConstructor
-    public SigDigestAlgo() {
+    public SigDigestAlgo(String algorithm) {
+        this.algorithm = algorithm;
     }
 
     public String getAlgorithm() {
         return algorithm;
-    }
-
-    @DataBoundSetter
-    public void setAlgorithm(String value) {
-        this.algorithm = value;
     }
 
     @Extension

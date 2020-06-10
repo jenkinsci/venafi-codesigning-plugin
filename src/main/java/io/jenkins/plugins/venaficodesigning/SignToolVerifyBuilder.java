@@ -36,11 +36,8 @@ import org.kohsuke.stapler.QueryParameter;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 public class SignToolVerifyBuilder extends Builder implements SimpleBuildStep {
-    @SuppressFBWarnings("UUF_UNUSED_FIELD")
-    private String tppName;
-
-    @SuppressFBWarnings("UUF_UNUSED_FIELD")
-    private String fileOrGlob;
+    private final String tppName;
+    private final String fileOrGlob;
 
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
     private String signToolPath;
@@ -52,25 +49,17 @@ public class SignToolVerifyBuilder extends Builder implements SimpleBuildStep {
     private boolean useMachineConfiguration;
 
     @DataBoundConstructor
-    public SignToolVerifyBuilder() {
+    public SignToolVerifyBuilder(String tppName, String fileOrGlob) {
+        this.tppName = tppName;
+        this.fileOrGlob = fileOrGlob;
     }
 
     public String getTppName() {
         return tppName;
     }
 
-    @DataBoundSetter
-    public void setTppName(String value) {
-        this.tppName = value;
-    }
-
     public String getFileOrGlob() {
         return fileOrGlob;
-    }
-
-    @DataBoundSetter
-    public void setFileOrGlob(String value) {
-        this.fileOrGlob = value;
     }
 
     public String getSignToolPath() {

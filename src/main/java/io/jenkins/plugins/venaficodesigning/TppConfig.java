@@ -11,7 +11,6 @@ import jenkins.model.Jenkins;
 
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 
 import java.net.MalformedURLException;
@@ -28,13 +27,16 @@ import com.thoughtworks.xstream.annotations.XStreamAlias;
 
 @XStreamAlias("tpp-config")
 public class TppConfig extends AbstractDescribableImpl<TppConfig> {
-    private String name;
-    private String authUrl;
-    private String hsmUrl;
+    private final String name;
+    private final String authUrl;
+    private final String hsmUrl;
     private final String credentialsId;
 
     @DataBoundConstructor
-    public TppConfig(String credentialsId) {
+    public TppConfig(String name, String authUrl, String hsmUrl, String credentialsId) {
+        this.name = name;
+        this.authUrl = authUrl;
+        this.hsmUrl = hsmUrl;
         this.credentialsId = credentialsId;
     }
 
@@ -42,18 +44,8 @@ public class TppConfig extends AbstractDescribableImpl<TppConfig> {
         return name;
     }
 
-    @DataBoundSetter
-    public void setName(String value) {
-        this.name = value;
-    }
-
     public String getAuthUrl() {
         return authUrl;
-    }
-
-    @DataBoundSetter
-    public void setAuthUrl(String value) {
-        this.authUrl = value;
     }
 
     public String getHsmUrl() {
@@ -62,11 +54,6 @@ public class TppConfig extends AbstractDescribableImpl<TppConfig> {
 
     public String getCredentialsId() {
         return credentialsId;
-    }
-
-    @DataBoundSetter
-    public void setHsmUrl(String value) {
-        this.hsmUrl = value;
     }
 
     @Extension
