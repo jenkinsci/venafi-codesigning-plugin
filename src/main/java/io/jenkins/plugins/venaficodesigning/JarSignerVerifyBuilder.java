@@ -517,5 +517,10 @@ public class JarSignerVerifyBuilder extends Builder implements SimpleBuildStep {
                 return FormValidation.ok();
             }
         }
+
+        public FormValidation doCheckCertLabel(@QueryParameter String value)
+        {
+            return FormValidation.validateRequired(value);
+        }
     }
 }
