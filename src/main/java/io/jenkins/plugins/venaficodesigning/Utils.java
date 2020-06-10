@@ -103,89 +103,6 @@ public class Utils {
         }
     }
 
-    public static String readWindowsRegistry(Launcher launcher,
-        boolean use64Bit, String keyName, String valueName)
-        throws IOException, InterruptedException
-    {
-        ArrayList<String> cmdArgs = new ArrayList<String>();
-        cmdArgs.add("reg");
-        cmdArgs.add("query");
-        cmdArgs.add(keyName);
-        cmdArgs.add("/v");
-        cmdArgs.add(valueName);
-        if (use64Bit) {
-            cmdArgs.add("/reg:64");
-        } else {
-            cmdArgs.add("/reg:32");
-        }
-
-        ByteArrayOutputStream output = new ByteArrayOutputStream();
-        Launcher.ProcStarter starter =
-            launcher.
-            launch().
-            cmds(cmdArgs.toArray(new String[0])).
-            stdout(output).
-            quiet(true);
-
-        Proc proc = starter.start();
-        int code = proc.join();
-        String outputStr = output.toString("UTF-8").trim();
-
-        if (code != 0) {
-            throw new IOException("Error reading Windows registry key '" + keyName
-                + "\\" + valueName + "': the 'reg' command exited with code " + code
-                + " and the following output: " + outputStr);
-        }
-
-        String[] lines = outputStr.split("\r?\n");
-        for (String line: lines) {
-            int idx = line.indexOf("REG_SZ");
-            if (idx != -1) {
-                return line.substring(idx + "REG_SZ".length()).trim();
-            }
-        }
-
-        throw new IOException("Error reading Windows registry key '" + keyName
-            + "\\" + valueName + "': unable to parse 'reg' command output: "
-            + outputStr);
-    }
-
-    public static void deleteWindowsRegistry(Launcher launcher, boolean use64Bit, String path)
-        throws IOException, InterruptedException
-    {
-        ArrayList<String> cmdArgs = new ArrayList<String>();
-        cmdArgs.add("reg");
-        cmdArgs.add("delete");
-        cmdArgs.add(path);
-        cmdArgs.add("/va");
-        cmdArgs.add("/f");
-        if (use64Bit) {
-            cmdArgs.add("/reg:64");
-        } else {
-            cmdArgs.add("/reg:32");
-        }
-
-        ByteArrayOutputStream output = new ByteArrayOutputStream();
-        Launcher.ProcStarter starter =
-            launcher.
-            launch().
-            cmds(cmdArgs.toArray(new String[0])).
-            stdout(output).
-            quiet(true);
-
-        Proc proc = starter.start();
-        int code = proc.join();
-
-        if (code != 0) {
-            String outputStr = output.toString("UTF-8").trim();
-            if (outputStr.indexOf("The system was unable to find the specified registry key or value", 0) != -1) {
-                throw new IOException("Error deleting Windows registry key '" + path
-                    + "': the 'reg' command exited with code " + code
-                    + " and the following output: " + outputStr);
-            }
-        }
-    }
-
     public static FilePath detectVenafiClientToolsDir(Launcher launcher, AgentInfo agentInfo,
         FilePath nodeRoot, String userProvidedVenafiClientToolsDir)
         throws InterruptedException, IOException
@@ -195,8 +112,9 @@ public class Utils {
         } else if (agentInfo.osType == OsType.MACOS) {
             return nodeRoot.child("/Library/Venafi/CodeSigning");
         } else if (agentInfo.osType == OsType.WINDOWS) {
-            String result = readWindowsRegistry(launcher, agentInfo.isWindows64Bit,
-                "HKLM\\Software\\Venafi\\Platform", "Client Base Path");
+            WindowsRegistry registry = new WindowsRegistry(new RealCommandLauncher(launcher),
+                agentInfo.isWindows64Bit);
+            String result = registry.readKey("HKLM\\Software\\Venafi\\Platform", "Client Base Path");
             if (result != null) {
                 return nodeRoot.child(result);
             }
