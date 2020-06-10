@@ -50,10 +50,10 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
     private String certLabel;
 
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
-    private String timestampingServers;
+    private List<TimestampingServer> timestampingServers;
 
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
-    private String extraArgs;
+    private List<CmdArg> extraArgs;
 
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
     private String venafiClientToolsDir;
@@ -106,30 +106,22 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
         this.certLabel = value;
     }
 
-    public String getTimestampingServers() {
+    public List<TimestampingServer> getTimestampingServers() {
         return timestampingServers;
     }
 
     @DataBoundSetter
-    public void setTimestampingServers(String value) {
-        if (value.equals("")) {
-            this.timestampingServers = null;
-        } else {
-            this.timestampingServers = value;
-        }
+    public void setTimestampingServers(List<TimestampingServer> value) {
+        this.timestampingServers = value;
     }
 
-    public String getExtraArgs() {
+    public List<CmdArg> getExtraArgs() {
         return extraArgs;
     }
 
     @DataBoundSetter
-    public void setExtraArgs(String value) {
-        if (value.equals("")) {
-            this.extraArgs = null;
-        } else {
-            this.extraArgs = value;
-        }
+    public void setExtraArgs(List<CmdArg> value) {
+        this.extraArgs = value;
     }
 
     public String getVenafiClientToolsDir() {
@@ -313,8 +305,6 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
         Collection<FilePath> filesToSign)
         throws InterruptedException, IOException
     {
-        List<String> timestampingServersList = getTimestampingServersAsList();
-
         Map<String, String> envs = new HashMap<String, String>();
         envs.put("LIBHSMINSTANCE", sessionID);
 
@@ -333,17 +323,14 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
             cmdArgs.add("-providerArg");
             cmdArgs.add(pkcs11ProviderConfigFile.getRemote());
             cmdArgs.add("-certs");
-            if (!timestampingServersList.isEmpty()) {
-                String timestampingServer = timestampingServersList.get(
-                    (int) (Math.random() * timestampingServersList.size()));
+            if (!getTimestampingServers().isEmpty()) {
+                TimestampingServer timestampingServer = getTimestampingServers().get(
+                    (int) (Math.random() * getTimestampingServers().size()));
                 cmdArgs.add("-tsa");
-                cmdArgs.add(timestampingServer);
+                cmdArgs.add(timestampingServer.getAddress());
             }
-            if (getExtraArgs() != null) {
-                List<String> extraArgsList = Utils.parseStringAsNewlineDelimitedList(getExtraArgs());
-                for (String extraArg: extraArgsList) {
-                    cmdArgs.add(extraArg);
-                }
+            for (CmdArg extraArg: getExtraArgs()) {
+                cmdArgs.add(extraArg.getArgument());
             }
             cmdArgs.add(fileToSign.getRemote());
             cmdArgs.add(getCertLabel());
@@ -402,16 +389,6 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
 
     int startAndJoinProc(Launcher.ProcStarter starter) throws IOException, InterruptedException {
         return starter.start().join();
-    }
-
-    private List<String> getTimestampingServersAsList() {
-        List<String> result = new ArrayList<String>();
-        if (getTimestampingServers() != null && !getTimestampingServers().isEmpty()) {
-            for (String server: getTimestampingServers().split("\\s+")) {
-                result.add(server);
-            }
-        }
-        return result;
     }
 
     @Symbol("venafiCodeSignWithJarSigner")

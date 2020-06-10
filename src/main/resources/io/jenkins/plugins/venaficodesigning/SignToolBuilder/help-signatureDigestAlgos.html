@@ -1,10 +1,9 @@
 <p>The digest algorithm(s) to use to creating signatures.</p>
 <p>
-    If not specified, 'sha256' is used as the default algorithm. This is very secure,
+    If none specified, 'sha256' is used as the default algorithm. This is very secure,
     but may not be compatible with older Windows versions. If you need compatibility
-    with older Windows versions, you should specify 'sha1 sha256'.
+    with older Windows versions, you should specify 'sha1' and 'sha256' (in that order).
 </p>
 <p>
-    You can specify multiple ones by separating them with a space. Like this: 'sha1 sha256'.
     When multiple digest algorithms are specified, they are applied in the order specified.
 </p>
