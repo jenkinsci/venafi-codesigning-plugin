@@ -30,4 +30,4 @@ deploy:
     #- 'mvn $MAVEN_CLI_OPTS deploy -s ci_settings.xml'
     - 'echo "TODO: not yet implemented"'
   only:
-    - master
+    - main
