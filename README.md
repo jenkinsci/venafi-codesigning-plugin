@@ -271,7 +271,18 @@ venafiCodeSignWithSignTool tppName: 'Main Demo Server',
 
 Verifies one or more files with Microsoft's [Signtool](https://docs.microsoft.com/en-us/dotnet/framework/tools/signtool-exe) tool.
 
-It assumes that signtool.exe is in PATH, unless you explicitly specify its path with `signToolPath`.
+Important notes and caveats:
+
+ * This function will automatically synchronize all certificates in the TPP with the local Windows certificate store.
+
+   However, the first time this synchronization happens, Windows will pop up an interactive confirmation dialog. This means a human has to manually click on OK, before verification can proceed.
+
+   If this is problematic, then there are two ways to solve this issue:
+
+    - Ensure that the root certificate of the certificate that was used to sign the target file, is pre-installed.
+    - In Aperture (the TPP web admin panel), configure the relevant TPP project, and disable the "Include Certificate Chain" option.
+
+ * It assumes that signtool.exe is in PATH, unless you explicitly specify its path with `signToolPath`.
 
 #### Example pipeline usage
 
