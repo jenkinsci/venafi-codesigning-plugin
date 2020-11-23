@@ -125,7 +125,7 @@ venafiCodeSignWithJarSigner tppName: 'Main Demo Server',
      - http://timestamp.comodoca.com/authenticode
      - http://tsa.starfieldtech.com
 
- * `extraArgs`: Specify extra custom CLI arguments to pass to Jarsigner.
+ * `extraArgs`: Specifies extra custom CLI arguments to pass to Jarsigner.
 
     These arguments will be _appended_ to the Jarsigner CLI invocation, and take precedence over any arguments implicitly passed by this plugin.
 
@@ -138,7 +138,7 @@ venafiCodeSignWithJarSigner tppName: 'Main Demo Server',
     ]
     ~~~
 
- * `venafiClientToolsDir`: Specify the path to the directory in which Venafi CodeSign Protect client tools are installed. If not specified, it's autodetected as follows:
+ * `venafiClientToolsDir`: Specifies the path to the directory in which Venafi CodeSign Protect client tools are installed. If not specified, it's autodetected as follows:
 
      - Linux: /opt/venafi/codesign
      - macOS: /Library/Venafi/CodeSigning
@@ -172,7 +172,7 @@ venafiVerifyWithJarSigner tppName: 'Main Demo Server',
 
 #### Optional pipeline parameters
 
- * `venafiClientToolsDir`: Specify the path to the directory in which Venafi CodeSign Protect client tools are installed. If not specified, it's autodetected as follows:
+ * `venafiClientToolsDir`: Specifies the path to the directory in which Venafi CodeSign Protect client tools are installed. If not specified, it's autodetected as follows:
 
      - Linux: /opt/venafi/codesign
      - macOS: /Library/Venafi/CodeSigning
@@ -245,7 +245,7 @@ venafiCodeSignWithSignTool tppName: 'Main Demo Server',
     ]
     ~~~
 
- * `appendSignatures` (boolean): If the target file(s) already have signatures, then append a new signature instead of overwriting the existing signatures.
+ * `appendSignatures` (boolean): If the target file(s) already have signatures, then append a new signature instead of overwriting the existing signatures. Defaults to false.
 
  * `extraArgs`: Specify extra custom CLI arguments to pass to Signtool.
 
@@ -263,9 +263,9 @@ venafiCodeSignWithSignTool tppName: 'Main Demo Server',
 
  * `signToolPath`: The full path to signtool.exe. If not specified, we assume that it's in PATH.
 
- * `venafiClientToolsDir`: Specify the path to the directory in which Venafi CodeSign Protect client tools are installed. If not specified, it's autodetected from the registry. If that fails, we fallback to <code>C:\Program Files\Venafi CodeSign Protect</code>.
+ * `venafiClientToolsDir`: Specifies the path to the directory in which Venafi CodeSign Protect client tools are installed. If not specified, it's autodetected from the registry. If that fails, we fallback to C:\Program Files\Venafi CodeSign Protect.
 
- * `useMachineConfiguration` (boolean)
+ * `useMachineConfiguration` (boolean): Whether to load CSP configuration from the machine registry hive instead of the user registry hive. Defaults to false.
 
 ### Verify with Signtool (`venafiVerifyWithSignTool`)
 
@@ -301,6 +301,6 @@ venafiVerifyWithSignTool tppName: 'Main Demo Server',
 
 * `signToolPath`: The full path to signtool.exe. If not specified, we assume that it's in PATH.
 
- * `venafiClientToolsDir`: Specify the path to the directory in which Venafi CodeSign Protect client tools are installed. If not specified, it's autodetected from the registry. If that fails, we fallback to <code>C:\Program Files\Venafi CodeSign Protect</code>.
+ * `venafiClientToolsDir`: Specifies the path to the directory in which Venafi CodeSign Protect client tools are installed. If not specified, it's autodetected from the registry. If that fails, we fallback to C:\Program Files\Venafi CodeSign Protect.
 
- * `useMachineConfiguration` (boolean)
+ * `useMachineConfiguration` (boolean): Whether to load CSP configuration from the machine registry hive instead of the user registry hive. Defaults to false.
