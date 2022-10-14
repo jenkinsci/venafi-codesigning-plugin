@@ -32,16 +32,16 @@
       <developer>
         <id>avwsolutions</id>
         <name>Arnold van Wijnbergen</name>
-        <email>a.vanwijnbergen@fullstaq.com</email>
-        <organization>Fullstaq</organization>
-        <organizationUrl>https://fullstaq.com</organizationUrl>
+        <email>arnold@qensus.com</email>
+        <organization>Qensus Labs</organization>
+        <organizationUrl>https://qensus.com</organizationUrl>
       </developer>
       <developer>
-        <id>FooBarWidget</id>
-        <name>Hongli Lai</name>
-        <email>h.lai@fullstaq.com</email>
-        <organization>Fullstaq</organization>
-        <organizationUrl>https://fullstaq.com</organizationUrl>
+        <id>sanhi</id>
+        <name>Sander Hindimith</name>
+        <email>sander@hindimith.nl</email>
+        <organization>Qensus Labs</organization>
+        <organizationUrl>https://qensus.com</organizationUrl>
       </developer>
     </developers>
 
