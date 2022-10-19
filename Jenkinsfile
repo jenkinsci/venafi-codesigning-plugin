@@ -1,1 +1,4 @@
-buildPlugin(configurations: buildPlugin.recommendedConfigurations())
+buildPlugin(configurations: [
+    [platform: 'linux', jdk: '11'],
+    [platform: 'windows', jdk: '11'],
+])
