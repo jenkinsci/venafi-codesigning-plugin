@@ -12,10 +12,6 @@
         <f:textbox />
     </f:entry>
 
-    <f:entry title="${%Credentials}" field="credentialsId">
-        <c:select context="${app}" includeUser="false" expressionAllowed="false" />
-    </f:entry>
-
     <f:entry title="">
         <div align="right">
             <f:repeatableDeleteButton />

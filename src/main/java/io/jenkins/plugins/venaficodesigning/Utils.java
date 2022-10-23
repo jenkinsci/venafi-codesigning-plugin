@@ -10,6 +10,7 @@ import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 
+import jenkins.model.Jenkins;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang.StringUtils;
 
@@ -19,6 +20,8 @@ import hudson.Proc;
 import hudson.model.Computer;
 import hudson.model.Item;
 import hudson.security.ACL;
+
+import static com.cloudbees.plugins.credentials.CredentialsProvider.lookupCredentials;
 
 public class Utils {
     @Nullable
@@ -42,6 +45,14 @@ public class Utils {
                 CredentialsMatchers.anyOf(
                     CredentialsMatchers.instanceOf(StandardUsernamePasswordCredentials.class))));
     }
+
+    public static StandardUsernamePasswordCredentials lookupSystemCredentials(String credentialsId)
+   	{
+   		return CredentialsMatchers.firstOrNull(
+   				lookupCredentials(StandardUsernamePasswordCredentials.class, Jenkins.getInstance(), ACL.SYSTEM,
+   						PluginConfig.HTTP_SCHEME, PluginConfig.HTTPS_SCHEME),
+   				CredentialsMatchers.withId(credentialsId));
+   	}
 
     // Determines the FQDN of the given Computer.
     //
