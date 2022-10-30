@@ -26,7 +26,7 @@ import static com.cloudbees.plugins.credentials.CredentialsProvider.lookupCreden
 public class Utils {
     @Nullable
     public static StandardUsernamePasswordCredentials findCredentials(String credentialsId) {
-        return findCredentials(credentialsId, null);
+        return lookupSystemCredentials(credentialsId);
     }
 
     @Nullable
@@ -46,6 +46,7 @@ public class Utils {
                     CredentialsMatchers.instanceOf(StandardUsernamePasswordCredentials.class))));
     }
 
+    @Nullable
     public static StandardUsernamePasswordCredentials lookupSystemCredentials(String credentialsId)
    	{
    		return CredentialsMatchers.firstOrNull(

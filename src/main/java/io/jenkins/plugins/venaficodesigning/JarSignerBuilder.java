@@ -166,6 +166,10 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
         }
 
         StandardUsernamePasswordCredentials credentials = findCredentials(getCredential());
+        if (credentials == null) {
+            throw new AbortException("No credentials with ID '"
+                + credential.getCredentialsId() + "' found");
+        }
 
         String sessionID = RandomStringUtils.random(24, true, true);
         AgentInfo agentInfo = nodeRoot.act(new AgentInfo.GetAgentInfo());
