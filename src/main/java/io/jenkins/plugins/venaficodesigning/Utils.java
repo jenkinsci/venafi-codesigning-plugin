@@ -26,7 +26,7 @@ import static com.cloudbees.plugins.credentials.CredentialsProvider.lookupCreden
 public class Utils {
     @Nullable
     public static StandardUsernamePasswordCredentials findCredentials(String credentialsId) {
-        return findCredentials(credentialsId);
+        return findCredentials(credentialsId, null);
     }
 
     @Nullable
