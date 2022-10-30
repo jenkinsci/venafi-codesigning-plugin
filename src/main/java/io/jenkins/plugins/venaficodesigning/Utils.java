@@ -26,7 +26,7 @@ import static com.cloudbees.plugins.credentials.CredentialsProvider.lookupCreden
 public class Utils {
     @Nullable
     public static StandardUsernamePasswordCredentials findCredentials(String credentialsId) {
-        return lookupSystemCredentials(credentialsId);
+        return findCredentials(credentialsId);
     }
 
     @Nullable
@@ -38,7 +38,7 @@ public class Utils {
             CredentialsProvider.lookupCredentials(
                 StandardUsernamePasswordCredentials.class,
                 item,
-                ACL.SYSTEM,
+                null,
                 Collections.emptyList()),
             CredentialsMatchers.allOf(
                 CredentialsMatchers.withId(credentialsId),
@@ -50,7 +50,7 @@ public class Utils {
     public static StandardUsernamePasswordCredentials lookupSystemCredentials(String credentialsId)
    	{
    		return CredentialsMatchers.firstOrNull(
-   				lookupCredentials(StandardUsernamePasswordCredentials.class, Jenkins.getInstance(), ACL.SYSTEM,
+   				lookupCredentials(StandardUsernamePasswordCredentials.class, Jenkins.getInstance(), null,
    						PluginConfig.HTTP_SCHEME, PluginConfig.HTTPS_SCHEME),
    				CredentialsMatchers.withId(credentialsId));
    	}
