@@ -3,6 +3,7 @@ package io.jenkins.plugins.venaficodesigning;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Iterator;
 
 import javax.annotation.Nullable;
 
@@ -19,14 +20,19 @@ import hudson.Launcher;
 import hudson.Proc;
 import hudson.model.Computer;
 import hudson.model.Item;
-import hudson.security.ACL;
 
-import static com.cloudbees.plugins.credentials.CredentialsProvider.lookupCredentials;
 
 public class Utils {
     @Nullable
     public static StandardUsernamePasswordCredentials findCredentials(String credentialsId) {
-        return findCredentials(credentialsId, null);
+        StandardUsernamePasswordCredentials credentials = findCredentials(credentialsId, null);
+        if (credentials == null) {
+            Iterator<Item> iterator = Jenkins.get().allItems().iterator();
+            while (credentials == null && iterator.hasNext()){
+                credentials = findCredentials(credentialsId, iterator.next());
+            }
+        }
+        return credentials;
     }
 
     @Nullable
@@ -45,15 +51,6 @@ public class Utils {
                 CredentialsMatchers.anyOf(
                     CredentialsMatchers.instanceOf(StandardUsernamePasswordCredentials.class))));
     }
-
-    @Nullable
-    public static StandardUsernamePasswordCredentials lookupSystemCredentials(String credentialsId)
-   	{
-   		return CredentialsMatchers.firstOrNull(
-   				lookupCredentials(StandardUsernamePasswordCredentials.class, Jenkins.getInstance(), null,
-   						PluginConfig.HTTP_SCHEME, PluginConfig.HTTPS_SCHEME),
-   				CredentialsMatchers.withId(credentialsId));
-   	}
 
     // Determines the FQDN of the given Computer.
     //
