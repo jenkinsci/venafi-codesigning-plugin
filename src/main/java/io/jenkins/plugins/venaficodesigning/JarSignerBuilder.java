@@ -165,7 +165,7 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
                 + getTppName() + "' found");
         }
 
-        StandardUsernamePasswordCredentials credentials = findCredentials(getCredential());
+        StandardUsernamePasswordCredentials credentials = findCredentialsById(credential, run);
         if (credentials == null) {
             throw new AbortException("No credentials with ID '"
                 + credential.getCredentialsId() + "' found");
@@ -197,8 +197,8 @@ public class JarSignerBuilder extends Builder implements SimpleBuildStep {
         return PluginConfig.get().getTppConfigByName(name);
     }
 
-    StandardUsernamePasswordCredentials findCredentials(Credential credential) {
-        return Utils.findCredentials(credential.getCredentialsId());
+    StandardUsernamePasswordCredentials findCredentialsById(Credential credential, Run<?,?> run) {
+        return Utils.findCredentialsById(credential.getCredentialsId(), run);
     }
 
     private void loginTpp(Logger logger, Launcher launcher, FilePath ws,

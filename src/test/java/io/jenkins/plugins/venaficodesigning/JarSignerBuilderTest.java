@@ -45,7 +45,7 @@ public class JarSignerBuilderTest {
         builder.setFile("file.jar");
         doReturn(tppConfig).when(builder).getTppConfigByName(TPP_NAME);
         doReturn(credential).when(builder).getCredential();
-        doReturn(credentials).when(builder).findCredentials(Mockito.any());
+        doReturn(credentials).when(builder).findCredentialsById(Mockito.any(), Mockito.any());
         doReturn(0).when(builder).startAndJoinProc(Mockito.any());
 
         FreeStyleProject project = jenkins.createFreeStyleProject();

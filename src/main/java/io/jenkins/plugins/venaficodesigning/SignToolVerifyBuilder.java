@@ -124,8 +124,7 @@ public class SignToolVerifyBuilder extends Builder implements SimpleBuildStep {
                 + getTppName() + "' found");
         }
 
-        StandardUsernamePasswordCredentials credentials = Utils.findCredentials(
-            credential.getCredentialsId());
+        StandardUsernamePasswordCredentials credentials = findCredentialsById(credential, run);
         if (credentials == null) {
             throw new AbortException("No credentials with ID '"
                 + credential.getCredentialsId() + "' found");
@@ -171,6 +170,10 @@ public class SignToolVerifyBuilder extends Builder implements SimpleBuildStep {
             throw new AbortException("Unable to retrieve root path of node");
         }
         return result;
+    }
+
+    StandardUsernamePasswordCredentials findCredentialsById(Credential credential, Run<?,?> run) {
+        return Utils.findCredentialsById(credential.getCredentialsId(), run);
     }
 
     private void loginTpp(Logger logger, Launcher launcher, FilePath ws, FilePath nodeRoot,
