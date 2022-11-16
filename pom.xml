@@ -9,12 +9,14 @@
     </parent>
     <groupId>io.jenkins.plugins</groupId>
     <artifactId>venafi-codesigning</artifactId>
-    <version>1.0.1-SNAPSHOT</version>
+    <version>${revision}${changelist}</version>
     <packaging>hpi</packaging>
     <properties>
         <jenkins.version>2.361.2</jenkins.version>
         <java.level>11</java.level>
         <workflow.version>2.0</workflow.version>
+        <revision>1.1.0</revision>
+        <changelist>-SNAPSHOT</changelist>
     </properties>
 
     <name>Venafi CodeSign Protect</name>
