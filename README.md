@@ -14,7 +14,7 @@ This plugin allows one to sign and verify files through Venafi CodeSign Protect.
  - [Setup & usage overview](#setup-usage-overview)
  - [Compatibility](#compatibility)
  - [Client tools installation caveats](#client-tools-installation-caveats)
- - [TPP configuration](#tpp-configuration)
+ - [TLS Protect Datacenter configuration](#tpp-configuration)
  - [Security & master-slave node setup](#security-master-slave-node-setup)
  - [Build steps & pipeline functions](#build-steps-pipeline-functions)
     - [Sign with Jarsigner (`venafiCodeSignWithJarSigner`)](#sign-with-jarsigner-venaficodesignwithjarsigner)
@@ -24,7 +24,7 @@ This plugin allows one to sign and verify files through Venafi CodeSign Protect.
 
 ## Setup & usage overview
 
-You must already have access to one or more Venafi Trust Protection Platforms™ (TPPs). This plugin requires you to [configure TPP address and authentication details](#tpp-configuration).
+You must already have access to one or more Venafi TLS Protect Datacenter™ environments (formerly known as Trust Protection Platform, in short TPPs). This plugin requires you to [configure TPP address and authentication details](#tpp-configuration).
 
 This plugin works by shelling out to the Venafi CodeSign Protect client tools, on the node(s) on which Jenkins jobs execute. Therefore, you must already have the CodeSign Protect client tools installed on these nodes. The plugin will not install them for you.
 
@@ -38,7 +38,7 @@ Once the aforementioned are set up, go to [TPP configuration](#tpp-configuration
 
 This plugin is compatible with:
 
- * Trust Protection Platform 20.2 or later.
+ * TLS Protect Datacenter (formerly known as Trust Protection Platform) 20.2 or later.
  * Venafi CodeSign Protect client tools 20.2 or later.
 
 ## Client tools installation caveats
@@ -99,7 +99,7 @@ venafiCodeSignWithJarSigner tppName: 'Main Demo Server',
 
 #### Required pipeline parameters
 
- * `tppName`: The Venafi Trust Protection Platform (TPP) to use for signing.
+ * `tppName`: The Venafi TLS Protect Datacenter (formerly known as TPP) to use for signing.
  * `file` or `glob`: Specifies the file(s) to sign, either through a single filename, or a glob.
  * `certLabel`: The label of the certificate (inside the TPP) to use for code signing. You can obtain a list of labels with `pkcs11config listcertificates`.
 
@@ -166,7 +166,7 @@ venafiVerifyWithJarSigner tppName: 'Main Demo Server',
 
 #### Required pipeline parameters
 
- * `tppName`: The Venafi Trust Protection Platform (TPP) that contains the certificate that the signed file(s) were signed by.
+ * `tppName`: The Venafi TLS Protect Datacenter (formerly known as TPP) that contains the certificate that the signed file(s) were signed by.
  * `file` or `glob`: Specifies the file(s) to verify, either through a single filename, or a glob.
  * `certLabel`: The label of the certificate (inside the TPP) that was used for signing the file(s). You can obtain a list of labels with `pkcs11config listcertificates`.
 
@@ -198,7 +198,7 @@ venafiCodeSignWithSignTool tppName: 'Main Demo Server',
 
 #### Required pipeline parameters
 
- * `tppName`: The Venafi Trust Protection Platform (TPP) to use for signing.
+ * `tppName`: The Venafi TLS Protect Datacenter (formerly known as TPP) to use for signing.
  * `fileOrGlob`: A path or a glob that specifies the file(s) to be signed.
  * `subjectName` or `sha1`: Specifies the certificate (inside the TPP) to use for signing.
 
@@ -293,7 +293,7 @@ venafiVerifyWithSignTool tppName: 'Main Demo Server',
 
 #### Required pipeline parameters
 
- * `tppName`: The Venafi Trust Protection Platform (TPP) that contains the certificate that the signed file(s) were signed by.
+ * `tppName`: The Venafi TLS Protect Datacenter (formerly known as TPP) that contains the certificate that the signed file(s) were signed by.
 
  * `fileOrGlob`: A path or a glob that specifies the file(s) to be verified.
 
