@@ -42,7 +42,7 @@ This plugin is compatible with:
  * TLS Protect Datacenter (formerly known as Trust Protection Platform) 20.2 or later.
  * Venafi CodeSign Protect client tools 20.2 or later.
 
-::warning:: If you are upgrading to version 1.2.1, don´t forget to reconfigure your credentials.
+:warning: If you are upgrading to version 1.2.1, don´t forget to reconfigure your credentials.
 
 ## Role strategy integration
 
