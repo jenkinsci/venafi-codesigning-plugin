@@ -9,6 +9,7 @@ import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import com.cloudbees.plugins.credentials.domains.SchemeRequirement;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.StaplerRequest;
 
@@ -20,6 +21,10 @@ import net.sf.json.JSONObject;
 
 @Extension
 public class PluginConfig extends GlobalConfiguration {
+
+    public static final SchemeRequirement HTTP_SCHEME = new SchemeRequirement("http");
+   	public static final SchemeRequirement HTTPS_SCHEME = new SchemeRequirement("https");
+
     public static final String CONFIGURATION_ID = "venafi-code-signing-plugin-configuration";
     public static final PluginConfig EMPTY_CONFIG = new PluginConfig(Collections.emptyList());
 

@@ -1,5 +1,9 @@
 package io.jenkins.plugins.venaficodesigning;
 
+import com.cloudbees.plugins.credentials.CredentialsMatchers;
+import com.cloudbees.plugins.credentials.common.StandardCredentials;
+import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
+import com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials;
 import hudson.Launcher;
 import hudson.Proc;
 import hudson.AbortException;
@@ -7,14 +11,18 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.model.AbstractProject;
 import hudson.model.Computer;
+import hudson.model.Item;
 import hudson.model.Node;
 import hudson.model.Run;
 import hudson.model.TaskListener;
+import hudson.security.ACL;
 import hudson.tasks.Builder;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import hudson.util.Secret;
 import hudson.tasks.BuildStepDescriptor;
+import jenkins.model.Jenkins;
+import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.ByteArrayOutputStream;
@@ -34,10 +42,13 @@ import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.kohsuke.stapler.verb.POST;
 
 public class SignToolVerifyBuilder extends Builder implements SimpleBuildStep {
     private final String tppName;
     private final String fileOrGlob;
+
+    private final Credential credential;
 
     @SuppressFBWarnings("UUF_UNUSED_FIELD")
     private String signToolPath;
@@ -49,9 +60,10 @@ public class SignToolVerifyBuilder extends Builder implements SimpleBuildStep {
     private boolean useMachineConfiguration;
 
     @DataBoundConstructor
-    public SignToolVerifyBuilder(String tppName, String fileOrGlob) {
+    public SignToolVerifyBuilder(String tppName, String fileOrGlob, Credential credential) {
         this.tppName = tppName;
         this.fileOrGlob = fileOrGlob;
+        this.credential = credential;
     }
 
     public String getTppName() {
@@ -112,11 +124,10 @@ public class SignToolVerifyBuilder extends Builder implements SimpleBuildStep {
                 + getTppName() + "' found");
         }
 
-        StandardUsernamePasswordCredentials credentials = Utils.findCredentials(
-            tppConfig.getCredentialsId());
+        StandardUsernamePasswordCredentials credentials = findCredentialsById(credential, run);
         if (credentials == null) {
             throw new AbortException("No credentials with ID '"
-                + tppConfig.getCredentialsId() + "' found");
+                + credential.getCredentialsId() + "' found");
         }
 
         String sessionID = RandomStringUtils.random(24, true, true);
@@ -159,6 +170,10 @@ public class SignToolVerifyBuilder extends Builder implements SimpleBuildStep {
             throw new AbortException("Unable to retrieve root path of node");
         }
         return result;
+    }
+
+    StandardUsernamePasswordCredentials findCredentialsById(Credential credential, Run<?,?> run) {
+        return Utils.findCredentialsById(credential.getCredentialsId(), run);
     }
 
     private void loginTpp(Logger logger, Launcher launcher, FilePath ws, FilePath nodeRoot,
@@ -372,6 +387,32 @@ public class SignToolVerifyBuilder extends Builder implements SimpleBuildStep {
                 items.add(config.getName(), config.getName());
             }
             return items;
+        }
+
+        @POST
+        public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Item item, @QueryParameter String credentialsId) {
+            StandardListBoxModel result = new StandardListBoxModel();
+            if (item == null) {
+                if (!Jenkins.get().hasPermission(Jenkins.ADMINISTER)) {
+                    return result.includeCurrentValue(credentialsId);
+                }
+            } else {
+                if (!item.hasPermission(Item.EXTENDED_READ)
+                    && !item.hasPermission(CredentialsProvider.USE_ITEM)) {
+                    return result.includeCurrentValue(credentialsId);
+                }
+            }
+
+            return result
+                .includeMatchingAs(ACL.SYSTEM,
+                    item,
+                    StandardCredentials.class,
+                    new ArrayList<>(),
+                    CredentialsMatchers.anyOf(
+					    CredentialsMatchers.instanceOf(StandardUsernamePasswordCredentials.class),
+					    CredentialsMatchers.instanceOf(UsernamePasswordCredentials.class))
+                )
+                .includeCurrentValue(credentialsId);
         }
 
         public FormValidation doCheckFileOrGlob(@QueryParameter String value) {

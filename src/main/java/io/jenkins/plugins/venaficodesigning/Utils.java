@@ -6,10 +6,10 @@ import java.util.Collections;
 
 import javax.annotation.Nullable;
 
-import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 
+import hudson.model.Run;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang.StringUtils;
 
@@ -17,30 +17,18 @@ import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Proc;
 import hudson.model.Computer;
-import hudson.model.Item;
-import hudson.security.ACL;
+
 
 public class Utils {
-    @Nullable
-    public static StandardUsernamePasswordCredentials findCredentials(String credentialsId) {
-        return findCredentials(credentialsId, null);
-    }
 
     @Nullable
-    public static StandardUsernamePasswordCredentials findCredentials(String credentialsId, Item item) {
+    public static StandardUsernamePasswordCredentials findCredentialsById(String credentialsId, Run<?,?> run) {
         if (StringUtils.isBlank(credentialsId)) {
             return null;
         }
-        return CredentialsMatchers.firstOrNull(
-            CredentialsProvider.lookupCredentials(
-                StandardUsernamePasswordCredentials.class,
-                item,
-                ACL.SYSTEM,
-                Collections.emptyList()),
-            CredentialsMatchers.allOf(
-                CredentialsMatchers.withId(credentialsId),
-                CredentialsMatchers.anyOf(
-                    CredentialsMatchers.instanceOf(StandardUsernamePasswordCredentials.class))));
+        return
+            CredentialsProvider.findCredentialById(credentialsId, StandardUsernamePasswordCredentials.class, run,
+                Collections.emptyList());
     }
 
     // Determines the FQDN of the given Computer.
