@@ -13,6 +13,7 @@ This plugin allows one to sign and verify files through Venafi CodeSign Protect.
 
  - [Setup & usage overview](#setup-usage-overview)
  - [Compatibility](#compatibility)
+ - [Role strategy integration](#role-strategy-integration)
  - [Client tools installation caveats](#client-tools-installation-caveats)
  - [TLS Protect Datacenter configuration](#tpp-configuration)
  - [Security & master-slave node setup](#security-master-slave-node-setup)
@@ -41,6 +42,15 @@ This plugin is compatible with:
  * TLS Protect Datacenter (formerly known as Trust Protection Platform) 20.2 or later.
  * Venafi CodeSign Protect client tools 20.2 or later.
 
+::warning:: If you are upgrading to version 1.2.1, don´t forget to reconfigure your credentials.
+
+## Role strategy integration
+
+In shared environments you may want to protect your code signing credentials and ensure nobody can use these credentials.
+By default, Jenkins `System` level credentials are available for every job to consume, which can raise a non-desirable situation.
+We support using `Folder` level credentials, but do require an additional plugin like the [Role-based Authorization Strategy](https://plugins.jenkins.io/role-strategy/).
+Leveraging the `Role-based Authorization` you can easily protect your code signing credentials.
+
 ## Client tools installation caveats
 
 The Venafi CodeSign Protect client tools manual for Java, may instruct you to register its PKCS11 security provider inside `java.security`. **Do not do this**, because it may prevent Jenkins, or a Jenkins slave agent, from starting.
@@ -61,6 +71,7 @@ Returned:  5 CKR_GENERAL_ERROR
 ## TPP configuration
 
 This plugin requires that you define which TPPs are available and how to connect to them.
+Since version 1.2.x credentials are part of the build configuration, for both freestyle projects and pipeline functions.
 
 Inside Jenkins, go to Manage Jenkins ➜ Configure System. Scroll down to "Venafi Code Signing" and define your TPPs there.
 
@@ -89,12 +100,14 @@ Signs one or more files with Java's [Jarsigner](https://docs.oracle.com/javase/7
 // Sign a single .jar file
 venafiCodeSignWithJarSigner tppName: 'Main Demo Server',
     file: 'foo.jar',
-    certLabel: 'my label'
+    certLabel: 'my label',
+    credential: [credentialsId: '669b87ac-48f2-47db-900e-5255bd08493a']
 
 // Sign multiple .jar files with a glob
 venafiCodeSignWithJarSigner tppName: 'Main Demo Server',
     glob: '*.jar',
-    certLabel: 'my label'
+    certLabel: 'my label',
+    credential: [credentialsId: '669b87ac-48f2-47db-900e-5255bd08493a']
 ~~~
 
 #### Required pipeline parameters
@@ -102,6 +115,7 @@ venafiCodeSignWithJarSigner tppName: 'Main Demo Server',
  * `tppName`: The Venafi TLS Protect Datacenter (formerly known as TPP) to use for signing.
  * `file` or `glob`: Specifies the file(s) to sign, either through a single filename, or a glob.
  * `certLabel`: The label of the certificate (inside the TPP) to use for code signing. You can obtain a list of labels with `pkcs11config listcertificates`.
+ * `credential`: An array that contains the `credentialsId` of the stored credential to use. This can be either stored at `System` or `Folder` level.
 
 #### Optional pipeline parameters
 
@@ -156,12 +170,14 @@ The node which performs the verification does not need to have pre-installed the
 // Verify a single .jar file
 venafiVerifyWithJarSigner tppName: 'Main Demo Server',
     file: 'foo.jar',
-    certLabel: 'my label'
+    certLabel: 'my label',
+    credential: [credentialsId: '669b87ac-48f2-47db-900e-5255bd08493a']
 
 // Verify multiple .jar files with a glob
 venafiVerifyWithJarSigner tppName: 'Main Demo Server',
     glob: '*.jar',
-    certLabel: 'my label'
+    certLabel: 'my label',
+    credential: [credentialsId: '669b87ac-48f2-47db-900e-5255bd08493a']
 ~~~
 
 #### Required pipeline parameters
@@ -169,6 +185,7 @@ venafiVerifyWithJarSigner tppName: 'Main Demo Server',
  * `tppName`: The Venafi TLS Protect Datacenter (formerly known as TPP) that contains the certificate that the signed file(s) were signed by.
  * `file` or `glob`: Specifies the file(s) to verify, either through a single filename, or a glob.
  * `certLabel`: The label of the certificate (inside the TPP) that was used for signing the file(s). You can obtain a list of labels with `pkcs11config listcertificates`.
+ * `credential`: An array that contains the `credentialsId` of the stored credential to use. This can be either stored at `System` or `Folder` level.
 
 #### Optional pipeline parameters
 
@@ -193,6 +210,7 @@ Important notes:
 venafiCodeSignWithSignTool tppName: 'Main Demo Server',
     fileOrGlob: 'foo.exe',
     subjectName: 'mydomain.com',
+    credential: [credentialsId: '669b87ac-48f2-47db-900e-5255bd08493a'],
     timestampingServers: [[address: 'http://timestamp.digicert.com']]
 ~~~
 
@@ -201,6 +219,7 @@ venafiCodeSignWithSignTool tppName: 'Main Demo Server',
  * `tppName`: The Venafi TLS Protect Datacenter (formerly known as TPP) to use for signing.
  * `fileOrGlob`: A path or a glob that specifies the file(s) to be signed.
  * `subjectName` or `sha1`: Specifies the certificate (inside the TPP) to use for signing.
+ * `credential`: An array that contains the `credentialsId` of the stored credential to use. This can be either stored at `System` or `Folder` level.
 
    You can either specify the certificate's Common Name ("Issued to" or "CN"), or its SHA-1 hash.
 
@@ -288,19 +307,18 @@ Important notes and caveats:
 
 ~~~groovy
 venafiVerifyWithSignTool tppName: 'Main Demo Server',
-    fileOrGlob: 'foo.exe'
+    fileOrGlob: 'foo.exe',
+    credential: [credentialsId: '669b87ac-48f2-47db-900e-5255bd08493a']
 ~~~
 
 #### Required pipeline parameters
 
  * `tppName`: The Venafi TLS Protect Datacenter (formerly known as TPP) that contains the certificate that the signed file(s) were signed by.
-
  * `fileOrGlob`: A path or a glob that specifies the file(s) to be verified.
+ * `credential`: An array that contains the `credentialsId` of the stored credential to use. This can be either stored at `System` or `Folder` level.
 
 #### Optional pipeline parameters
 
-* `signToolPath`: The full path to signtool.exe. If not specified, we assume that it's in PATH.
-
+ * `signToolPath`: The full path to signtool.exe. If not specified, we assume that it's in PATH.
  * `venafiClientToolsDir`: Specifies the path to the directory in which Venafi CodeSign Protect client tools are installed. If not specified, it's autodetected from the registry. If that fails, we fallback to C:\Program Files\Venafi CodeSign Protect.
-
  * `useMachineConfiguration` (boolean): Whether to load CSP configuration from the machine registry hive instead of the user registry hive. Defaults to false.
