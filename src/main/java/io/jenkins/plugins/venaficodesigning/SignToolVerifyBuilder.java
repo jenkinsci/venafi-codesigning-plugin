@@ -78,6 +78,10 @@ public class SignToolVerifyBuilder extends Builder implements SimpleBuildStep {
         return signToolPath;
     }
 
+    public Credential getCredential() {
+        return credential;
+    }
+
     @DataBoundSetter
     public void setSignToolPath(String value) {
         if (value.equals("")) {
