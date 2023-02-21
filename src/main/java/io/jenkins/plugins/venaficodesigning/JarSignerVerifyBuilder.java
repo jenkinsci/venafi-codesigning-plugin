@@ -102,6 +102,10 @@ public class JarSignerVerifyBuilder extends Builder implements SimpleBuildStep {
         return certLabel;
     }
 
+    public Credential getCredential() {
+        return credential;
+    }
+
     public String getVenafiClientToolsDir() {
         return venafiClientToolsDir;
     }

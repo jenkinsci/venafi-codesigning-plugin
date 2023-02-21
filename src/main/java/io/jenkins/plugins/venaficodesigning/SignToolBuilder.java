@@ -99,6 +99,10 @@ public class SignToolBuilder extends Builder implements SimpleBuildStep {
         return subjectName;
     }
 
+    public Credential getCredential() {
+        return credential;
+    }
+
     @DataBoundSetter
     public void setSubjectName(String value) {
         if (value.equals("")) {
